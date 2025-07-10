@@ -1,8 +1,8 @@
 {
   "name": "sms",
   "version": "0.0.1",
-  "description": "A Student Management System Developed By Sayapart",
-  "author": "",
+  "description": "A Student Management System Developed By Sayaparti Group",
+  "author": "dev-sandip",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
