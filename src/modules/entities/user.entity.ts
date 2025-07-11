@@ -1,3 +1,4 @@
+import { Enum } from '@/lib/types';
 import { InferSelectModel } from 'drizzle-orm';
 import {
   pgTable,
@@ -11,13 +12,26 @@ import {
   index,
   pgEnum,
 } from 'drizzle-orm/pg-core';
-// import { genderEnum, userRoleEnum } from './enums';
-export const userRoleEnum = pgEnum('user_role', [
-  'admin',
-  'teacher',
-  'student',
-]);
-export const genderEnum = pgEnum('gender', ['male', 'female', 'other']);
+export enum UserRoleEnum {
+  ADMIN = 'ADMIN',
+  TEACHER = 'TEACHER',
+  STUDENT = 'STUDENT',
+}
+export enum UserGenderEnum {
+  MALE = 'MALE',
+  FEMALE = 'FEMALE',
+  OTHER = 'OTHER',
+}
+
+export const userRoleEnum = pgEnum(
+  'user_role',
+  Object.values(UserRoleEnum) as Enum<UserRoleEnum>,
+);
+
+export const genderEnum = pgEnum(
+  'gender',
+  Object.values(UserGenderEnum) as Enum<UserGenderEnum>,
+);
 
 export const users = pgTable(
   'users',
