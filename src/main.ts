@@ -2,10 +2,18 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/interceptor/response.interceptor';
 import { UnprocessableEntityException, ValidationPipe } from '@nestjs/common';
+import { Logger } from './lib/logger';
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
+  const PORT = process.env.PORT || 5000;
+  const logger = new Logger('Bootstrap');
+  const app = (await NestFactory.create(AppModule)).setGlobalPrefix('api/v1');
+  logger.info(`Starting server... on port ${PORT}`);
 
+  // logs incoming requests with method and route
+  app.use((req, res, next) => {
+    logger.info(`Incoming request: ${req.method} ${req.originalUrl}`);
+    next();
+  });
   /**
    * Global validation pipe for DTOs.
    */
@@ -37,5 +45,7 @@ async function bootstrap() {
    * Global response interceptor to format responses as `application/json`.
    */
   app.useGlobalInterceptors(new ResponseInterceptor());
+
+  await app.listen(PORT);
 }
 bootstrap();
