@@ -7,6 +7,7 @@ import {
   text,
 } from 'drizzle-orm/pg-core';
 import { academicYears } from './academic-year.entity';
+import { InferSelectModel } from 'drizzle-orm';
 
 export const classes = pgTable(
   'classes',
@@ -27,3 +28,4 @@ export const classes = pgTable(
     ),
   ],
 );
+export type CLASSES = InferSelectModel<typeof classes>;

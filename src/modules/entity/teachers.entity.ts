@@ -11,6 +11,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { users } from './user.entity';
+import { InferSelectModel } from 'drizzle-orm';
 export const teachers = pgTable(
   'teachers',
   {
@@ -35,3 +36,4 @@ export const teachers = pgTable(
     index('teachers_is_active_idx').on(table.isActive),
   ],
 );
+export type TEACHERS = InferSelectModel<typeof teachers>;

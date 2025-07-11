@@ -1,3 +1,4 @@
+import { InferSelectModel } from 'drizzle-orm';
 import {
   pgTable,
   uuid,
@@ -43,3 +44,4 @@ export const users = pgTable(
     index('users_is_active_idx').on(table.isActive),
   ],
 );
+export type USERS = InferSelectModel<typeof users>;

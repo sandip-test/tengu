@@ -8,6 +8,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 import { classes } from './class.entity';
+import { InferSelectModel } from 'drizzle-orm';
 
 export const sections = pgTable(
   'sections',
@@ -26,3 +27,4 @@ export const sections = pgTable(
     uniqueIndex('sections_name_class_idx').on(table.name, table.classId),
   ],
 );
+export type SECTIONS = InferSelectModel<typeof sections>;

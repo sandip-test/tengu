@@ -1,3 +1,4 @@
+import { InferSelectModel } from 'drizzle-orm';
 import {
   pgTable,
   uuid,
@@ -25,3 +26,5 @@ export const academicYears = pgTable(
     index('academic_years_is_active_idx').on(table.isActive),
   ],
 );
+
+export type ACADEMIC_YEARS = InferSelectModel<typeof academicYears>;
