@@ -1,98 +1,313 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🎓 Student Management System (SMS)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A comprehensive Student Management System built with **NestJS**, **TypeScript**, **Drizzle ORM**, and **PostgreSQL**. This system provides a robust platform for managing students, teachers, academic years, classes, and sections in educational institutions.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 📋 Table of Contents
 
-## Description
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Prerequisites](#-prerequisites)
+- [Installation](#-installation)
+- [Environment Setup](#-environment-setup)
+- [Database Setup](#-database-setup)
+- [Running the Application](#-running-the-application)
+- [API Documentation](#-api-documentation)
+- [Project Structure](#-project-structure)
+- [Available Scripts](#-available-scripts)
+- [Database Schema](#-database-schema)
+- [Authentication](#-authentication)
+- [Testing](#-testing)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## ✨ Features
 
-## Project setup
+- **User Management**: Admin, Teacher, and Student role-based access control
+- **Authentication & Authorization**: JWT-based secure authentication system
+- **Academic Management**: Manage academic years, classes, and sections
+- **Student Management**: Complete student profile management
+- **Teacher Management**: Teacher profile and assignment management
+- **API Documentation**: Auto-generated Swagger/OpenAPI documentation
+- **Database Management**: Type-safe database operations with Drizzle ORM
+- **Validation**: Comprehensive input validation with class-validator
+- **Security**: Password hashing with bcrypt and secure JWT tokens
+
+## 🚀 Tech Stack
+
+### Backend
+
+- **Framework**: [NestJS](https://nestjs.com/) - Progressive Node.js framework
+- **Language**: [TypeScript](https://www.typescriptlang.org/) - Type-safe JavaScript
+- **Database**: [PostgreSQL](https://www.postgresql.org/) - Powerful relational database
+- **ORM**: [Drizzle ORM](https://orm.drizzle.team/) - Type-safe SQL toolkit
+- **Authentication**: [JWT](https://jwt.io/) - JSON Web Tokens
+- **Validation**: [class-validator](https://github.com/typestack/class-validator) - Decorator-based validation
+- **Documentation**: [Swagger/OpenAPI](https://swagger.io/) - API documentation
+
+### Development Tools
+
+- **Package Manager**: [pnpm](https://pnpm.io/) - Fast, disk space efficient package manager
+- **Code Quality**: [ESLint](https://eslint.org/) + [Prettier](https://prettier.io/)
+- **Testing**: [Jest](https://jestjs.io/) - JavaScript testing framework
+- **Database Management**: [Drizzle Kit](https://orm.drizzle.team/kit-docs/overview) - Database migrations and introspection
+
+## 📋 Prerequisites
+
+Before running this application, make sure you have the following installed:
+
+- **Node.js** (v18 or higher)
+- **pnpm** (recommended) or npm/yarn
+- **PostgreSQL** (v12 or higher)
+- **Git**
+
+## 🛠 Installation
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/sayapatriGroup/SMS.git
+   cd SMS
+   ```
+
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
+
+## 🔧 Environment Setup
+
+1. **Create environment file**
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Configure your environment variables**
+
+   ```env
+   # Database Configuration
+   DATABASE_URL="postgresql://username:password@localhost:5432/sms_db"
+
+   # JWT Configuration
+   JWT_SECRET="your-super-secure-jwt-secret-key"
+
+   # Application Configuration
+   PORT=3000
+   NODE_ENV=development
+   ```
+
+## 🗄️ Database Setup
+
+1. **Create PostgreSQL database**
+
+   ```sql
+   CREATE DATABASE sms_db;
+   ```
+
+2. **Generate and run migrations**
+
+   ```bash
+   # Generate migration files
+   pnpm run db:generate
+
+   # Apply migrations to database
+   pnpm run db:migrate
+   ```
+
+3. **Open Drizzle Studio (optional)**
+   ```bash
+   pnpm run db:studio
+   ```
+
+## 🚀 Running the Application
+
+### Development Mode
 
 ```bash
-$ pnpm install
+# Watch mode with hot reload
+pnpm run dev
+
+# Debug mode
+pnpm run start:debug
 ```
 
-## Compile and run the project
+### Production Mode
 
 ```bash
-# development
-$ pnpm run start
+# Build the application
+pnpm run build
 
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+# Start production server
+pnpm run start:prod
 ```
 
-## Run tests
+The application will be available at `http://localhost:3000`
+
+## 📚 API Documentation
+
+Once the application is running, you can access the interactive API documentation:
+
+- **Swagger UI**: `http://localhost:3000/api`
+- **OpenAPI JSON**: `http://localhost:3000/api-json`
+
+## 📁 Project Structure
+
+```
+src/
+├── common/                 # Shared utilities and decorators
+│   ├── decorators/        # Custom decorators
+│   ├── guards/            # Authentication guards
+│   ├── interceptors/      # Response interceptors
+│   └── validators/        # Custom validators
+├── db/                    # Database configuration
+│   ├── index.ts          # Database connection
+│   └── schema.ts         # Database schema exports
+├── drizzle/              # Database migrations
+├── lib/                  # Utility libraries
+│   ├── auth.lib.ts       # Authentication utilities
+│   └── types.ts          # Type definitions
+├── modules/              # Feature modules
+│   ├── entities/         # Database entities
+│   └── users/            # User module
+│       ├── dto/          # Data Transfer Objects
+│       ├── users.controller.ts
+│       ├── users.service.ts
+│       └── users.module.ts
+├── app.module.ts         # Root application module
+└── main.ts              # Application entry point
+```
+
+## 📜 Available Scripts
+
+| Script                | Description                              |
+| --------------------- | ---------------------------------------- |
+| `pnpm run dev`        | Start development server with hot reload |
+| `pnpm run build`      | Build the application for production     |
+| `pnpm run start`      | Start the application                    |
+| `pnpm run start:prod` | Start production server                  |
+| `pnpm run lint`       | Run ESLint to check code quality         |
+| `pnpm run format`     | Format code with Prettier                |
+| `pnpm run test`       | Run unit tests                           |
+| `pnpm run test:e2e`   | Run end-to-end tests                     |
+| `pnpm run test:cov`   | Run tests with coverage report           |
+| `pnpm run db:studio`  | Open Drizzle Studio                      |
+| `pnpm run db`         | Generate and apply migrations            |
+| `pnpm run db:reset`   | Reset database (drop and recreate)       |
+
+## 🗃️ Database Schema
+
+### Users Table
+
+- **id**: UUID (Primary Key)
+- **email**: Unique email address
+- **password**: Hashed password
+- **role**: ADMIN | TEACHER | STUDENT
+- **firstName**: User's first name
+- **lastName**: User's last name
+- **phoneNumber**: Contact number (optional)
+- **dateOfBirth**: Date of birth (optional)
+- **gender**: MALE | FEMALE | OTHER (optional)
+- **address**: Physical address (optional)
+- **profilePicture**: Profile image URL (optional)
+- **isActive**: Account status
+- **lastLogin**: Last login timestamp
+- **createdAt**: Account creation timestamp
+- **updatedAt**: Last update timestamp
+
+### Other Entities
+
+- **Academic Years**: Manage school years
+- **Classes**: Class/grade management
+- **Sections**: Section divisions within classes
+- **Teachers**: Teacher-specific information
+
+## 🔐 Authentication
+
+The system uses JWT-based authentication with the following features:
+
+- **Password Hashing**: Secure password storage using bcrypt
+- **JWT Tokens**: Stateless authentication with 24-hour expiration
+- **Role-based Access**: Different permissions for Admin, Teacher, and Student roles
+- **Secure Endpoints**: Protected routes with authentication guards
+
+### Authentication Flow
+
+1. User registers/logs in with email and password
+2. Server validates credentials and returns JWT token
+3. Client includes token in Authorization header for protected requests
+4. Server validates token and grants access based on user role
+
+## 🧪 Testing
 
 ```bash
-# unit tests
-$ pnpm run test
+# Run unit tests
+pnpm run test
 
-# e2e tests
-$ pnpm run test:e2e
+# Run tests in watch mode
+pnpm run test:watch
 
-# test coverage
-$ pnpm run test:cov
+# Run e2e tests
+pnpm run test:e2e
+
+# Generate coverage report
+pnpm run test:cov
 ```
 
-## Deployment
+## 🤝 Contributing
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+We welcome contributions! Please follow these steps:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. **Commit your changes**
+   ```bash
+   git commit -m 'Add some amazing feature'
+   ```
+4. **Push to the branch**
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+5. **Open a Pull Request**
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
+### Development Guidelines
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+- Follow TypeScript best practices
+- Write tests for new features
+- Update documentation as needed
+- Follow the existing code style
+- Use meaningful commit messages
 
-## Resources
+## 📄 License
 
-Check out a few resources that may come in handy when working with NestJS:
+This project is licensed under the **UNLICENSED** license - see the package.json file for details.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## 👥 Authors
 
-## Support
+- **dev-sandip** - Initial work and development
+- **Sayapatri Group** - Project ownership and guidance
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## 🆘 Support
 
-## Stay in touch
+If you encounter any issues or have questions:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+1. Check the [Issues](https://github.com/sayapatriGroup/SMS/issues) page
+2. Create a new issue with detailed information
+3. Contact the development team
 
-## License
+## 🚧 Roadmap
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- [ ] **Student Enrollment System**
+- [ ] **Grade Management**
+- [ ] **Attendance Tracking**
+- [ ] **Parent Portal**
+- [ ] **Fee Management**
+- [ ] **Timetable Management**
+- [ ] **Report Generation**
+- [ ] **Mobile Application**
+
+---
+
+**Made with ❤️ by Sayapatri Group**
