@@ -144,6 +144,7 @@ export class UserResponseDto {
     example: 'john.doe@example.com',
     description: 'User email address',
   })
+  @IsEmail()
   email: string;
 
   @ApiProperty({
@@ -239,6 +240,7 @@ export class UserDto implements Omit<USERS, 'password'> {
     example: 'john.doe@example.com',
     description: 'User email address',
   })
+  @IsEmail()
   email: string;
 
   @ApiProperty({
@@ -320,4 +322,20 @@ export class UserDto implements Omit<USERS, 'password'> {
     description: 'Updated at timestamp',
   })
   updatedAt: Date | null;
+}
+export class LoginUserDto {
+  @ApiProperty({
+    example: 'login@sayaptari.com',
+    description: 'Email address for login',
+  })
+  @IsEmail()
+  email: string;
+  @ApiProperty({
+    example: 'password123',
+    description: 'Password for login',
+    minLength: 6,
+  })
+  @IsString()
+  @MinLength(6)
+  password: string;
 }

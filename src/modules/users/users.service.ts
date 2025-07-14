@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { CreateUserDto, LoginUserDto, UpdateUserDto } from './dto/user.dto';
 import { db } from '@/db';
 import { users } from '../entities';
 import { eq } from 'drizzle-orm';
-import { passwordHash } from '@/lib/auth.lib';
+import { generateToken, passwordCompare, passwordHash } from '@/lib/auth.lib';
 import { SafeUserAPIResponse } from '@/common/dto/response/user-safe-api.response';
+import { ApiResponse } from '@/common/dto/response/api-response';
 
 @Injectable()
 export class UsersService {
@@ -36,5 +37,37 @@ export class UsersService {
       .where(eq(users.id, id))
       .returning();
     return SafeUserAPIResponse(updatedUser[0]);
+  }
+  async loginUser(user: LoginUserDto) {
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, user.email))
+      .limit(1);
+    if (!existingUser) {
+      return new ApiResponse({
+        status: 'error',
+        message: 'User with this email does not exist',
+      });
+    }
+    const isPasswordValid = await passwordCompare(
+      user.password,
+      existingUser[0].password,
+    );
+    if (!isPasswordValid) {
+      return new ApiResponse({
+        status: 'error',
+        message: 'Invalid password',
+      });
+    }
+    const token = generateToken(existingUser[0]);
+    return new ApiResponse({
+      status: 'success',
+      message: 'User logged in successfully',
+      data: {
+        user: SafeUserAPIResponse(existingUser[0]),
+        token,
+      },
+    });
   }
 }
