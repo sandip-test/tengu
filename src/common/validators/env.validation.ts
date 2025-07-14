@@ -36,6 +36,9 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   LOG_LEVEL: string;
+
+  @IsString()
+  JWT_SECRET: string;
 }
 
 export type EnvConfig = InstanceType<typeof EnvironmentVariables>;
