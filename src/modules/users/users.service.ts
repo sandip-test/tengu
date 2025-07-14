@@ -10,7 +10,9 @@ import { ApiResponse } from '@/common/dto/response/api-response';
 @Injectable()
 export class UsersService {
   async createUser(userData: CreateUserDto) {
+    console.log('Creating user with data:', userData);
     const hashedPassword = await passwordHash(userData.password);
+
     const newUser = await db
       .insert(users)
       .values({ ...userData, password: hashedPassword })
