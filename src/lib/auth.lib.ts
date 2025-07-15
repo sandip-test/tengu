@@ -1,6 +1,7 @@
 import { USERS } from '@/db/schema';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
+import { UnauthorizedException } from '@nestjs/common';
 
 export const passwordHash = async (password: string): Promise<string> => {
   const salt = await bcrypt.genSalt(10);
@@ -33,17 +34,12 @@ export const generateToken = (user: Pick<USERS, 'id' | 'email'>): string => {
 };
 
 // Safe token verification returning typed payload
-export const verifyToken = (token: string): Promise<JwtPayload> => {
-  return new Promise((resolve, reject) => {
-    jwt.verify(
-      token,
-      process.env.JWT_SECRET!,
-      (err: Error | null, decoded: any) => {
-        if (err) {
-          return reject(err);
-        }
-        resolve(decoded as JwtPayload);
-      },
-    );
-  });
+export const verifyToken = (token: string): JwtPayload => {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    return decoded;
+  } catch (err) {
+    console.error('Token verification error:', err);
+    throw new UnauthorizedException('Invalid or expired token!');
+  }
 };

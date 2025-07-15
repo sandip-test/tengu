@@ -72,4 +72,12 @@ export class UsersService {
       },
     });
   }
+  async listAllUsers() {
+    const allUsers = await db.query.users.findMany();
+    return new ApiResponse({
+      status: 'success',
+      message: 'All users retrieved successfully',
+      data: allUsers.map(SafeUserAPIResponse),
+    });
+  }
 }
