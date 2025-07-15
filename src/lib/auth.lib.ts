@@ -1,4 +1,4 @@
-import { USERS } from '@/db/schema';
+import { UserRoleEnum, USERS } from '@/db/schema';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import { UnauthorizedException } from '@nestjs/common';
@@ -19,13 +19,17 @@ export const passwordCompare = async (
 export interface JwtPayload {
   id: string;
   email: string;
+  role: UserRoleEnum; // ✅ Include role
 }
 
 // Token generation using defined payload type
-export const generateToken = (user: Pick<USERS, 'id' | 'email'>): string => {
+export const generateToken = (
+  user: Pick<USERS, 'id' | 'email' | 'role'>,
+): string => {
   const payload: JwtPayload = {
     id: user.id,
     email: user.email,
+    role: user.role!,
   };
 
   return jwt.sign(payload, process.env.JWT_SECRET!, {
