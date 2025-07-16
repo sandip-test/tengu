@@ -16,7 +16,7 @@ export class UsersController {
   async loginUser(@Body() loginUserDto: LoginUserDto) {
     return this.usersService.loginUser(loginUserDto);
   }
-  @ProtectFromUnauthorized(UserRoleEnum.STUDENT)
+  @ProtectFromUnauthorized(UserRoleEnum.STUDENT, UserRoleEnum.TEACHER)
   @Get('/user')
   async allUsers() {
     return this.usersService.listAllUsers();

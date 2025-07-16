@@ -3,17 +3,23 @@ import {
   ExecutionContext,
   Injectable,
   UnauthorizedException,
+  ForbiddenException,
   mixin,
   Type,
-  ForbiddenException,
 } from '@nestjs/common';
 import { verifyToken } from '@/lib/auth.lib';
 import { UserRoleEnum } from '@/db/schema';
+import { db } from '@/db';
 
+/**
+ * Auth guard that checks for a valid JWT token in the request headers.
+ * If the token is valid, it extracts user info and attaches it to the request.
+ * Admins can access any route. Other roles must match `allowedRoles`.
+ */
 export function RequireAuth(allowedRoles?: UserRoleEnum[]): Type<CanActivate> {
   @Injectable()
   class RoleGuard implements CanActivate {
-    canActivate(context: ExecutionContext): boolean {
+    async canActivate(context: ExecutionContext): Promise<boolean> {
       const request = context.switchToHttp().getRequest();
       const authHeader = request.headers.authorization;
 
@@ -23,24 +29,28 @@ export function RequireAuth(allowedRoles?: UserRoleEnum[]): Type<CanActivate> {
 
       const token: string = authHeader.split(' ')[1];
       const data = verifyToken(token);
-
       if (!data) {
         throw new UnauthorizedException('Invalid or expired token');
       }
 
-      request.user = {
-        id: data.id,
-        email: data.email,
-        role: data.role,
-      };
+      const user = await db.query.users.findFirst({
+        where: (user, { eq }) => eq(user.id, data.id),
+      });
 
-      if (
-        allowedRoles &&
-        allowedRoles.length > 0 &&
-        !allowedRoles.includes(data.role)
-      ) {
-        throw new ForbiddenException(`Access denied for role: ${data.role}`);
+      if (!user) {
+        throw new UnauthorizedException('User not found');
       }
+
+      // ✅ Admins can access everything
+      if (user.role !== UserRoleEnum.ADMIN) {
+        if (allowedRoles && !allowedRoles.includes(user.role!)) {
+          throw new ForbiddenException(
+            'You do not have permission to access this resource',
+          );
+        }
+      }
+
+      request.user = user; // Attach user info to request
 
       return true;
     }
