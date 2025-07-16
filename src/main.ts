@@ -62,6 +62,8 @@ async function bootstrap() {
       swaggerPath,
       apiReference({
         theme: 'bluePlanet',
+        title: `${APP_CONFIG.NAME} | API  Documentation`,
+        cdn: 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@latest',
         url: '/swagger-spec.json',
       }),
     );
