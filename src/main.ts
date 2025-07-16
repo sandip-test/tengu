@@ -3,6 +3,15 @@ import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/interceptor/response.interceptor';
 import { UnprocessableEntityException, ValidationPipe } from '@nestjs/common';
 import { Logger } from './lib/logger';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
+import { APP_CONFIG } from './config';
+import * as express from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
+
+import { apiReference } from '@scalar/nestjs-api-reference';
+
 async function bootstrap() {
   const PORT = process.env.PORT || 5000;
   const logger = new Logger('Bootstrap');
@@ -14,6 +23,52 @@ async function bootstrap() {
     logger.info(`Incoming request: ${req.method} ${req.originalUrl}`);
     next();
   });
+
+  /**
+   * Serve static files from public folder.
+   */
+  app.use(express.static(path.join('public')));
+
+  /**
+   * Enable Swagger if specified in env.
+   */
+  if (process.env.ENABLE_SWAGGER == 'true') {
+    logger.info('Enabling Swagger');
+    const config = new DocumentBuilder()
+      .setTitle(`API Docs | ${APP_CONFIG.NAME} | ${APP_CONFIG.CURRENT_VERSION}`)
+      .setVersion(APP_CONFIG.CURRENT_VERSION)
+      .addSecurity('jwt-auth', {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description:
+          'Use the `Authorization` header with `Bearer <token>` format.',
+      })
+      .build();
+
+    const swaggerFilename = 'swagger-spec.json';
+
+    const document = SwaggerModule.createDocument(app, config);
+    // Save JSON spec to serve in public folder
+
+    fs.writeFileSync(
+      path.join(`public/${swaggerFilename}`),
+      JSON.stringify(document),
+    );
+
+    const swaggerPath = process.env.SWAGGER_PATH ?? '/docs';
+
+    app.use(
+      swaggerPath,
+      apiReference({
+        theme: 'bluePlanet',
+        url: '/swagger-spec.json',
+      }),
+    );
+  } else {
+    logger.log('Skipping swagger docs initialization!');
+  }
+
   /**
    * Global validation pipe for DTOs.
    */
