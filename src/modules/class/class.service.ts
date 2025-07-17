@@ -9,4 +9,13 @@ export class ClassService {
     const newClass = await db.insert(classes).values(data).returning();
     return new ApiResponse(newClass[0]);
   }
+  async getAllClasses() {
+    const allClasses = await db.query.classes.findMany({
+      with: {
+        academicYear: true,
+      },
+    });
+
+    return new ApiResponse(allClasses);
+  }
 }

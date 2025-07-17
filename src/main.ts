@@ -18,12 +18,6 @@ async function bootstrap() {
   const app = (await NestFactory.create(AppModule)).setGlobalPrefix('api/v1');
   logger.info(`Starting server... on port ${PORT}`);
 
-  // logs incoming requests with method and route
-  app.use((req, res, next) => {
-    logger.info(`Incoming request: ${req.method} ${req.originalUrl}`);
-    next();
-  });
-
   /**
    * Serve static files from public folder.
    */

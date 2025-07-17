@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ClassService } from './class.service';
 import { CreateClassDto } from './dto/class.dto';
 
@@ -8,5 +8,9 @@ export class ClassController {
   @Post('/create')
   async createClass(@Body() createClassDTO: CreateClassDto) {
     return this.classService.createClass(createClassDTO);
+  }
+  @Get('/all')
+  async getAllClasses() {
+    return this.classService.getAllClasses();
   }
 }

@@ -7,7 +7,8 @@ import {
   text,
 } from 'drizzle-orm/pg-core';
 import { academicYears } from './academic-year.entity';
-import { InferSelectModel } from 'drizzle-orm';
+import { InferSelectModel, relations } from 'drizzle-orm';
+import { sections } from './sections.entity';
 
 export const classes = pgTable(
   'classes',
@@ -28,4 +29,16 @@ export const classes = pgTable(
     ),
   ],
 );
+
+export const classesRelations = relations(classes, ({ one }) => ({
+  academicYear: one(academicYears, {
+    fields: [classes.academicYearId],
+    references: [academicYears.id],
+  }),
+}));
+
+export const sectionRelations = relations(classes, ({ many }) => ({
+  sections: many(sections),
+}));
+
 export type CLASSES = InferSelectModel<typeof classes>;

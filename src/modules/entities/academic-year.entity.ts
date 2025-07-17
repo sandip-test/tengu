@@ -1,4 +1,4 @@
-import { InferSelectModel } from 'drizzle-orm';
+import { InferSelectModel, relations } from 'drizzle-orm';
 import {
   pgTable,
   uuid,
@@ -9,6 +9,7 @@ import {
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core';
+import { classes } from './class.entity';
 
 export const academicYears = pgTable(
   'academic_years',
@@ -27,4 +28,7 @@ export const academicYears = pgTable(
   ],
 );
 
+export const academicYearsRelations = relations(academicYears, ({ many }) => ({
+  classes: many(classes),
+}));
 export type ACADEMIC_YEARS = InferSelectModel<typeof academicYears>;
