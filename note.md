@@ -326,3 +326,397 @@ const validateStudentData = (data: any[]) => {
 - Handle temporary password generation and distribution
 
 This approach gives you the flexibility for bulk operations while maintaining data integrity and a clean authentication flow.
+
+````ts
+import { InferSelectModel, relations } from 'drizzle-orm';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  timestamp,
+  boolean,
+  date,
+  uniqueIndex,
+  index,
+  text,
+  pgEnum,
+  time,
+  integer,
+} from 'drizzle-orm/pg-core';
+import { users } from './user.entity';
+import { students } from './student.entity';
+import { teachers } from './teacher.entity';
+import { classes } from './class.entity';
+import { sections } from './section.entity';
+import { subjects } from './subject.entity'; // You'll need this for subject-wise attendance
+
+// Attendance Status Enum
+export const attendanceStatusEnum = pgEnum('attendance_status', [
+  'present',
+  'absent',
+  'late',
+  'excused',
+  'half_day',
+  'sick',
+  'emergency',
+]);
+
+// Attendance Type Enum
+export const attendanceTypeEnum = pgEnum('attendance_type', [
+  'daily', // Full day attendance
+  'period', // Subject-wise/period-wise attendance
+]);
+
+// Main Attendance Table
+export const attendance = pgTable(
+  'attendance',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    studentId: uuid('student_id')
+      .references(() => students.id, { onDelete: 'cascade' })
+      .notNull(),
+    classId: uuid('class_id')
+      .references(() => classes.id, { onDelete: 'cascade' })
+      .notNull(),
+    sectionId: uuid('section_id')
+      .references(() => sections.id, { onDelete: 'cascade' })
+      .notNull(),
+    subjectId: uuid('subject_id').references(() => subjects.id, { onDelete: 'set null' }), // Nullable for daily attendance
+    attendanceDate: date('attendance_date').notNull(),
+    attendanceType: attendanceTypeEnum('attendance_type').default('daily'),
+    status: attendanceStatusEnum('status').notNull(),
+    timeIn: time('time_in'), // When student arrived (for late tracking)
+    timeOut: time('time_out'), // For half-day tracking
+    periodNumber: integer('period_number'), // For period-wise attendance
+    markedBy: uuid('marked_by')
+      .references(() => teachers.id, { onDelete: 'set null' })
+      .notNull(), // Teacher who marked attendance
+    remarks: text('remarks'), // Additional notes
+    isManualEntry: boolean('is_manual_entry').default(false), // Was it marked manually or auto?
+    markedAt: timestamp('marked_at').defaultNow(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => [
+    // Unique constraint: One attendance record per student per date per subject/period
+    uniqueIndex('attendance_student_date_subject_period_idx').on(
+      table.studentId,
+      table.attendanceDate,
+      table.subjectId,
+      table.periodNumber
+    ),
+    // Performance indexes
+    index('attendance_student_date_idx').on(table.studentId, table.attendanceDate),
+    index('attendance_class_section_date_idx').on(table.classId, table.sectionId, table.attendanceDate),
+    index('attendance_date_status_idx').on(table.attendanceDate, table.status),
+    index('attendance_marked_by_idx').on(table.markedBy),
+    index('attendance_type_idx').on(table.attendanceType),
+  ],
+);
+
+// Attendance Summary Table (for performance - calculated daily)
+export const attendanceSummary = pgTable(
+  'attendance_summary',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    studentId: uuid('student_id')
+      .references(() => students.id, { onDelete: 'cascade' })
+      .notNull(),
+    classId: uuid('class_id')
+      .references(() => classes.id, { onDelete: 'cascade' })
+      .notNull(),
+    sectionId: uuid('section_id')
+      .references(() => sections.id, { onDelete: 'cascade' })
+      .notNull(),
+    month: integer('month').notNull(), // 1-12
+    year: integer('year').notNull(),
+    totalDays: integer('total_days').default(0),
+    presentDays: integer('present_days').default(0),
+    absentDays: integer('absent_days').default(0),
+    lateDays: integer('late_days').default(0),
+    excusedDays: integer('excused_days').default(0),
+    halfDays: integer('half_days').default(0),
+    attendancePercentage: integer('attendance_percentage').default(0), // Stored as integer (95 for 95%)
+    lastUpdated: timestamp('last_updated').defaultNow(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('attendance_summary_student_month_year_idx').on(
+      table.studentId,
+      table.month,
+      table.year
+    ),
+    index('attendance_summary_class_section_idx').on(table.classId, table.sectionId),
+    index('attendance_summary_percentage_idx').on(table.attendancePercentage),
+  ],
+);
+
+// Attendance Rules/Settings
+export const attendanceSettings = pgTable(
+  'attendance_settings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    classId: uuid('class_id').references(() => classes.id, { onDelete: 'cascade' }),
+    sectionId: uuid('section_id').references(() => sections.id, { onDelete: 'cascade' }),
+    // Timing settings
+    schoolStartTime: time('school_start_time').default('08:00:00'),
+    schoolEndTime: time('school_end_time').default('15:00:00'),
+    lateThresholdMinutes: integer('late_threshold_minutes').default(15), // Late after 15 minutes
+    halfDayThresholdMinutes: integer('half_day_threshold_minutes').default(240), // Half day if less than 4 hours
+    // Attendance requirements
+    minimumAttendancePercentage: integer('minimum_attendance_percentage').default(75),
+    allowManualEntry: boolean('allow_manual_entry').default(true),
+    requireRemarks: boolean('require_remarks').default(false),
+    // Auto-marking settings
+    enableAutoMarking: boolean('enable_auto_marking').default(false),
+    autoMarkTime: time('auto_mark_time').default('09:00:00'),
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => [
+    index('attendance_settings_class_section_idx').on(table.classId, table.sectionId),
+  ],
+);
+
+// Attendance Templates (for bulk marking)
+export const attendanceTemplates = pgTable(
+  'attendance_templates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 100 }).notNull(), // e.g., "Regular Day", "Half Day", "Field Trip"
+    description: text('description'),
+    classId: uuid('class_id').references(() => classes.id, { onDelete: 'cascade' }),
+    sectionId: uuid('section_id').references(() => sections.id, { onDelete: 'cascade' }),
+    defaultStatus: attendanceStatusEnum('default_status').default('present'),
+    templateData: text('template_data'), // JSON string of student attendance data
+    createdBy: uuid('created_by').references(() => teachers.id, { onDelete: 'set null' }),
+    isActive: boolean('is_active').default(true),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+);
+
+// Relations
+export const attendanceRelations = relations(attendance, ({ one }) => ({
+  student: one(students, {
+    fields: [attendance.studentId],
+    references: [students.id],
+  }),
+  class: one(classes, {
+    fields: [attendance.classId],
+    references: [classes.id],
+  }),
+  section: one(sections, {
+    fields: [attendance.sectionId],
+    references: [sections.id],
+  }),
+  subject: one(subjects, {
+    fields: [attendance.subjectId],
+    references: [subjects.id],
+  }),
+  markedByTeacher: one(teachers, {
+    fields: [attendance.markedBy],
+    references: [teachers.id],
+  }),
+}));
+
+export const attendanceSummaryRelations = relations(attendanceSummary, ({ one }) => ({
+  student: one(students, {
+    fields: [attendanceSummary.studentId],
+    references: [students.id],
+  }),
+  class: one(classes, {
+    fields: [attendanceSummary.classId],
+    references: [classes.id],
+  }),
+  section: one(sections, {
+    fields: [attendanceSummary.sectionId],
+    references: [sections.id],
+  }),
+}));
+
+export const attendanceSettingsRelations = relations(attendanceSettings, ({ one }) => ({
+  class: one(classes, {
+    fields: [attendanceSettings.classId],
+    references: [classes.id],
+  }),
+  section: one(sections, {
+    fields: [attendanceSettings.sectionId],
+    references: [sections.id],
+  }),
+}));
+
+export const attendanceTemplatesRelations = relations(attendanceTemplates, ({ one }) => ({
+  class: one(classes, {
+    fields: [attendanceTemplates.classId],
+    references: [classes.id],
+  }),
+  section: one(sections, {
+    fields: [attendanceTemplates.sectionId],
+    references: [sections.id],
+  }),
+  createdByTeacher: one(teachers, {
+    fields: [attendanceTemplates.createdBy],
+    references: [teachers.id],
+  }),
+}));
+
+// TypeScript Types
+export type ATTENDANCE = InferSelectModel<typeof attendance>;
+export type ATTENDANCE_SUMMARY = InferSelectModel<typeof attendanceSummary>;
+export type ATTENDANCE_SETTINGS = InferSelectModel<typeof attendanceSettings>;
+export type ATTENDANCE_TEMPLATES = InferSelectModel<typeof attendanceTemplates>;
+
+export type AttendanceStatus = typeof attendanceStatusEnum.enumValues[number];
+export type AttendanceType = typeof attendanceTypeEnum.enumValues[number];
+
+// Helper Types for API
+export interface BulkAttendanceData {
+  studentId: string;
+  status: AttendanceStatus;
+  timeIn?: string;
+  timeOut?: string;
+  remarks?: string;
+}
+
+export interface MarkAttendanceRequest {
+  classId: string;
+  sectionId: string;
+  subjectId?: string;
+  attendanceDate: string;
+  attendanceType: AttendanceType;
+  periodNumber?: number;
+  attendance: BulkAttendanceData[];
+}
+
+export interface AttendanceReport {
+  studentId: string;
+  studentName: string;
+  totalDays: number;
+  presentDays: number;
+  absentDays: number;
+  lateCount: number;
+  attendancePercentage: number;
+  lastAbsent?: string;
+  trend: 'improving' | 'declining' | 'stable';
+}
+
+// Utility Functions Types
+export interface AttendanceFilters {
+  classId?: string;
+  sectionId?: string;
+  studentId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  status?: AttendanceStatus[];
+  attendanceType?: AttendanceType;
+}
+
+export interface AttendanceStats {
+  totalStudents: number;
+  presentToday: number;
+  absentToday: number;
+  lateToday: number;
+  attendanceRate: number;
+  monthlyTrend: Array<{
+    date: string;
+    presentCount: number;
+    totalCount: number;
+    percentage: number;
+  }>;
+}```
+````
+
+## 🎯 **Key Features of This Attendance Schema:**
+
+### 1. **Flexible Attendance Types**
+
+- **Daily Attendance**: Full day present/absent
+- **Period-wise Attendance**: Subject/class-wise attendance
+- **Multiple Status Options**: Present, Absent, Late, Excused, Half-day, Sick, Emergency
+
+### 2. **Performance Optimizations**
+
+- **Summary Table**: Pre-calculated monthly statistics
+- **Strategic Indexes**: Fast queries on common patterns
+- **Unique Constraints**: Prevent duplicate entries
+
+### 3. **Advanced Features**
+
+- **Time Tracking**: Late arrival and early departure times
+- **Bulk Operations**: Templates for quick marking
+- **Configurable Rules**: Different settings per class/section
+- **Audit Trail**: Who marked attendance and when
+
+### 4. **Real-world Considerations**
+
+- **Manual vs Auto**: Track if attendance was manually entered
+- **Remarks Field**: For special circumstances
+- **Flexible Timing**: Configurable late/half-day thresholds
+- **Template System**: For recurring patterns (field trips, etc.)
+
+## 📊 **Usage Examples:**
+
+### **Daily Attendance Marking**
+
+```typescript
+// Mark daily attendance for a class
+const markDailyAttendance = async (data: MarkAttendanceRequest) => {
+  const attendanceRecords = data.attendance.map((student) => ({
+    studentId: student.studentId,
+    classId: data.classId,
+    sectionId: data.sectionId,
+    attendanceDate: data.attendanceDate,
+    attendanceType: 'daily',
+    status: student.status,
+    timeIn: student.timeIn,
+    remarks: student.remarks,
+    markedBy: teacherId,
+  }));
+
+  await db.insert(attendance).values(attendanceRecords);
+};
+```
+
+### **Attendance Reports**
+
+```typescript
+// Get monthly attendance summary
+const getAttendanceSummary = async (
+  studentId: string,
+  month: number,
+  year: number,
+) => {
+  return await db
+    .select()
+    .from(attendanceSummary)
+    .where(
+      and(
+        eq(attendanceSummary.studentId, studentId),
+        eq(attendanceSummary.month, month),
+        eq(attendanceSummary.year, year),
+      ),
+    );
+};
+```
+
+## 🔄 **Integration with Your Existing Schema:**
+
+This attendance schema perfectly integrates with your current entities:
+
+- ✅ Links to `students` table
+- ✅ Links to `classes` and `sections`
+- ✅ Links to `teachers` for marking
+- ✅ Supports `subjects` for period-wise attendance
+- ✅ Follows your naming and structure conventions
+
+## 📈 **Benefits:**
+
+1. **Scalable**: Handles both daily and period-wise attendance
+2. **Performant**: Summary tables for fast reporting
+3. **Flexible**: Configurable rules per class
+4. **Complete**: Covers all attendance scenarios
+5. **Auditable**: Full tracking of who marked what when
+
+This schema supports all the attendance requirements you mentioned for Admin, Teacher, and Student roles!
