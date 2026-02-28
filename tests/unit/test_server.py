@@ -789,7 +789,8 @@ class TestMainFunctionBehavior:
         from unittest.mock import patch
 
         with patch.object(server.mcp, "run") as mock_run, \
-                patch("tengu.config.get_config") as mock_cfg:
+                patch("tengu.config.get_config") as mock_cfg, \
+                patch("sys.argv", ["tengu"]):
             mock_cfg.return_value.server.log_level = "INFO"
             mock_cfg.return_value.targets.allowed_hosts = []
             mock_cfg.return_value.stealth.enabled = False
@@ -802,7 +803,8 @@ class TestMainFunctionBehavior:
 
         with patch.object(server.mcp, "run"), \
                 patch("tengu.config.get_config") as mock_cfg, \
-                patch("logging.basicConfig") as mock_logging:
+                patch("logging.basicConfig") as mock_logging, \
+                patch("sys.argv", ["tengu"]):
             mock_cfg.return_value.server.log_level = "DEBUG"
             mock_cfg.return_value.targets.allowed_hosts = []
             mock_cfg.return_value.stealth.enabled = False

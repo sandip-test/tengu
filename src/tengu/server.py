@@ -62,6 +62,7 @@ from tengu.prompts.wireless_assessment import wireless_assessment
 # Resources
 from tengu.resources.checklists import get_checklist
 from tengu.resources.owasp import get_category, get_category_checklist, get_top10_list
+from tengu.resources.prompts import get_prompts_by_category, get_prompts_list, list_categories
 from tengu.resources.ptes import get_phase, get_phases_overview
 from tengu.tools.ad.crackmapexec import nxc_enum
 from tengu.tools.ad.enum4linux import enum4linux_scan
@@ -586,6 +587,38 @@ def resource_proxy_guide() -> str:
     if data_path.exists():
         return data_path.read_text()
     return json.dumps({"error": "Proxy guide data not found."})
+
+
+@mcp.resource("prompts://list")
+def resource_prompts_list() -> str:
+    """All available Tengu prompts — names, categories, descriptions, and parameters.
+
+    Use this resource to discover what workflow prompts are available before
+    suggesting them to the user. Categories: workflow, recon, vuln-assessment,
+    reporting, stealth, quick.
+    """
+    return json.dumps(get_prompts_list(), indent=2)
+
+
+@mcp.resource("prompts://category/{category}")
+def resource_prompts_by_category(category: str) -> str:
+    """Prompts filtered by category.
+
+    Valid categories: workflow, recon, vuln-assessment, reporting, stealth, quick.
+    Returns the list of prompts in that category with their parameters.
+    """
+    import re
+
+    category = re.sub(r"[^a-z0-9\-]", "", category.lower())
+    prompts = get_prompts_by_category(category)
+    if prompts is None:
+        return json.dumps(
+            {
+                "error": f"Unknown category: {category!r}",
+                "available_categories": list_categories(),
+            }
+        )
+    return json.dumps({"category": category, "count": len(prompts), "prompts": prompts}, indent=2)
 
 
 # ── PROMPTS ───────────────────────────────────────────────────────────────────
