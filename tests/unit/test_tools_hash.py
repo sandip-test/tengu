@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from tengu.tools.bruteforce.hash_tools import _HASH_PATTERNS, hash_identify
@@ -110,3 +112,291 @@ class TestHashIdentify:
         bcrypt = "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW"
         matches = [name for pat, name, _ in _HASH_PATTERNS if pat.match(bcrypt)]
         assert any("bcrypt" in m for m in matches)
+
+
+# ---------------------------------------------------------------------------
+# TestHashCrack — async tests for hash_crack function
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_ctx():
+    ctx = AsyncMock()
+    ctx.report_progress = AsyncMock()
+    return ctx
+
+
+def _mock_config():
+    cfg = MagicMock()
+    cfg.tools.defaults.wordlist_path = "/usr/share/wordlists/rockyou.txt"
+    cfg.tools.defaults.scan_timeout = 300
+    return cfg
+
+
+class TestHashCrack:
+    async def test_hash_crack_with_john_success(self, mock_ctx):
+        """john finds password — cracked=True in result."""
+        from tengu.tools.bruteforce.hash_tools import hash_crack
+
+        mock_john_result = {
+            "tool": "john",
+            "hash": "d41d8cd98f00b204e9800998ecf8427e",
+            "cracked": True,
+            "plaintext": "password123",
+        }
+
+        with (
+            patch("tengu.tools.bruteforce.hash_tools.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hash_tools._crack_with_john", AsyncMock(return_value=mock_john_result)),
+            patch("tengu.tools.bruteforce.hash_tools._crack_with_hashcat", AsyncMock(return_value={"cracked": False})),
+        ):
+            result = await hash_crack(
+                mock_ctx,
+                "d41d8cd98f00b204e9800998ecf8427e",
+                hash_type="md5",
+                tool_preference="john",
+            )
+
+        assert result["cracked"] is True
+        assert result["plaintext"] == "password123"
+
+    async def test_hash_crack_with_hashcat_fallback(self, mock_ctx):
+        """john fails, hashcat succeeds — cracked=True."""
+        from tengu.tools.bruteforce.hash_tools import hash_crack
+
+        mock_hashcat_result = {
+            "tool": "hashcat",
+            "hash": "d41d8cd98f00b204e9800998ecf8427e",
+            "cracked": True,
+            "plaintext": "secret",
+        }
+
+        with (
+            patch("tengu.tools.bruteforce.hash_tools.get_config", return_value=_mock_config()),
+            patch(
+                "tengu.tools.bruteforce.hash_tools._crack_with_john",
+                AsyncMock(return_value={"cracked": False}),
+            ),
+            patch(
+                "tengu.tools.bruteforce.hash_tools._crack_with_hashcat",
+                AsyncMock(return_value=mock_hashcat_result),
+            ),
+        ):
+            result = await hash_crack(
+                mock_ctx,
+                "d41d8cd98f00b204e9800998ecf8427e",
+                hash_type="md5",
+                tool_preference="auto",
+            )
+
+        assert result["cracked"] is True
+        assert result["plaintext"] == "secret"
+
+    async def test_hash_crack_both_fail(self, mock_ctx):
+        """Neither john nor hashcat find password — cracked=False."""
+        from tengu.tools.bruteforce.hash_tools import hash_crack
+
+        with (
+            patch("tengu.tools.bruteforce.hash_tools.get_config", return_value=_mock_config()),
+            patch(
+                "tengu.tools.bruteforce.hash_tools._crack_with_john",
+                AsyncMock(return_value={"cracked": False}),
+            ),
+            patch(
+                "tengu.tools.bruteforce.hash_tools._crack_with_hashcat",
+                AsyncMock(return_value={"cracked": False}),
+            ),
+        ):
+            result = await hash_crack(
+                mock_ctx,
+                "d41d8cd98f00b204e9800998ecf8427e",
+                hash_type="md5",
+                tool_preference="auto",
+            )
+
+        assert result["cracked"] is False
+        assert result["plaintext"] is None
+
+    async def test_hash_crack_custom_wordlist(self, mock_ctx):
+        """wordlist param is used instead of default."""
+        from tengu.tools.bruteforce.hash_tools import hash_crack
+
+        captured_args: dict = {}
+
+        async def fake_john(hash_value, hash_type, wordlist, timeout):
+            captured_args["wordlist"] = wordlist
+            return {"cracked": False}
+
+        with (
+            patch("tengu.tools.bruteforce.hash_tools.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hash_tools.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hash_tools._crack_with_john", fake_john),
+            patch(
+                "tengu.tools.bruteforce.hash_tools._crack_with_hashcat",
+                AsyncMock(return_value={"cracked": False}),
+            ),
+        ):
+            await hash_crack(
+                mock_ctx,
+                "d41d8cd98f00b204e9800998ecf8427e",
+                hash_type="md5",
+                wordlist="/custom/wordlist.txt",
+                tool_preference="john",
+            )
+
+        assert captured_args.get("wordlist") == "/custom/wordlist.txt"
+
+    async def test_hash_crack_tool_key(self, mock_ctx):
+        """Result has expected tool-related keys."""
+        from tengu.tools.bruteforce.hash_tools import hash_crack
+
+        with (
+            patch("tengu.tools.bruteforce.hash_tools.get_config", return_value=_mock_config()),
+            patch(
+                "tengu.tools.bruteforce.hash_tools._crack_with_john",
+                AsyncMock(return_value={"cracked": False}),
+            ),
+            patch(
+                "tengu.tools.bruteforce.hash_tools._crack_with_hashcat",
+                AsyncMock(return_value={"cracked": False}),
+            ),
+        ):
+            result = await hash_crack(
+                mock_ctx,
+                "d41d8cd98f00b204e9800998ecf8427e",
+                hash_type="md5",
+                tool_preference="auto",
+            )
+
+        assert "cracked" in result
+        assert "hash" in result
+
+    async def test_hash_crack_default_wordlist(self, mock_ctx):
+        """No wordlist provided — uses configured default."""
+        from tengu.tools.bruteforce.hash_tools import hash_crack
+
+        cfg = _mock_config()
+        cfg.tools.defaults.wordlist_path = "/default/rockyou.txt"
+        captured_args: dict = {}
+
+        async def fake_john(hash_value, hash_type, wordlist, timeout):
+            captured_args["wordlist"] = wordlist
+            return {"cracked": False}
+
+        with (
+            patch("tengu.tools.bruteforce.hash_tools.get_config", return_value=cfg),
+            patch("tengu.tools.bruteforce.hash_tools.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hash_tools._crack_with_john", fake_john),
+            patch(
+                "tengu.tools.bruteforce.hash_tools._crack_with_hashcat",
+                AsyncMock(return_value={"cracked": False}),
+            ),
+        ):
+            await hash_crack(
+                mock_ctx,
+                "d41d8cd98f00b204e9800998ecf8427e",
+                hash_type="md5",
+                tool_preference="john",
+            )
+
+        assert captured_args.get("wordlist") == "/default/rockyou.txt"
+
+
+# ---------------------------------------------------------------------------
+# TestCrackWithJohn
+# ---------------------------------------------------------------------------
+
+
+class TestCrackWithJohn:
+    async def test_crack_with_john_parses_output(self):
+        """John output 'hash:password' → extracts password."""
+        from tengu.tools.bruteforce.hash_tools import _crack_with_john
+
+        john_stdout_crack = ""  # No output from crack run
+        john_stdout_show = "d41d8cd98f00b204e9800998ecf8427e:password123\n1 password hash cracked\n"
+
+        with (
+            patch("tengu.tools.bruteforce.hash_tools.resolve_tool_path", return_value="/usr/bin/john"),
+            patch(
+                "tengu.tools.bruteforce.hash_tools.run_command",
+                AsyncMock(side_effect=[
+                    (john_stdout_crack, "", 0),  # crack run
+                    (john_stdout_show, "", 0),    # --show run
+                ]),
+            ),
+        ):
+            result = await _crack_with_john(
+                "d41d8cd98f00b204e9800998ecf8427e", "md5", "/wordlist.txt", 60
+            )
+
+        assert result["cracked"] is True
+        assert result["plaintext"] == "password123"
+
+    async def test_crack_with_john_not_found(self):
+        """John output has no password → cracked=False."""
+        from tengu.tools.bruteforce.hash_tools import _crack_with_john
+
+        john_stdout_crack = "0 password hashes cracked, 1 left\n"
+        john_stdout_show = "# No hashes found\n0 password hashes cracked\n"
+
+        with (
+            patch("tengu.tools.bruteforce.hash_tools.resolve_tool_path", return_value="/usr/bin/john"),
+            patch(
+                "tengu.tools.bruteforce.hash_tools.run_command",
+                AsyncMock(side_effect=[
+                    (john_stdout_crack, "", 1),
+                    (john_stdout_show, "", 0),
+                ]),
+            ),
+        ):
+            result = await _crack_with_john(
+                "d41d8cd98f00b204e9800998ecf8427e", "md5", "/wordlist.txt", 60
+            )
+
+        assert result["cracked"] is False
+
+
+# ---------------------------------------------------------------------------
+# TestCrackWithHashcat
+# ---------------------------------------------------------------------------
+
+
+class TestCrackWithHashcat:
+    async def test_crack_with_hashcat_parses_output(self):
+        """Hashcat output 'hash:plaintext' → extracts password."""
+        from tengu.tools.bruteforce.hash_tools import _crack_with_hashcat
+
+        hashcat_stdout = "d41d8cd98f00b204e9800998ecf8427e:letmein\n"
+
+        with (
+            patch("tengu.tools.bruteforce.hash_tools.resolve_tool_path", return_value="/usr/bin/hashcat"),
+            patch(
+                "tengu.tools.bruteforce.hash_tools.run_command",
+                AsyncMock(return_value=(hashcat_stdout, "", 0)),
+            ),
+        ):
+            result = await _crack_with_hashcat(
+                "d41d8cd98f00b204e9800998ecf8427e", "md5", "/wordlist.txt", 60
+            )
+
+        assert result["cracked"] is True
+        assert result["plaintext"] == "letmein"
+
+    async def test_crack_with_hashcat_not_found(self):
+        """No match in hashcat output → cracked=False."""
+        from tengu.tools.bruteforce.hash_tools import _crack_with_hashcat
+
+        hashcat_stdout = "Session..........: hashcat\nStatus...........: Exhausted\n"
+
+        with (
+            patch("tengu.tools.bruteforce.hash_tools.resolve_tool_path", return_value="/usr/bin/hashcat"),
+            patch(
+                "tengu.tools.bruteforce.hash_tools.run_command",
+                AsyncMock(return_value=(hashcat_stdout, "", 1)),
+            ),
+        ):
+            result = await _crack_with_hashcat(
+                "d41d8cd98f00b204e9800998ecf8427e", "md5", "/wordlist.txt", 60
+            )
+
+        assert result["cracked"] is False
