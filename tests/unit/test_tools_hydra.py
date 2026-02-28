@@ -1,8 +1,274 @@
-"""Unit tests for Hydra brute-force tool: parser and constants."""
+"""Unit tests for Hydra brute-force tool: attack function, parser, and constants."""
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 from tengu.tools.bruteforce.hydra import _SUPPORTED_SERVICES, _parse_hydra_output
+
+
+@pytest.fixture
+def mock_ctx():
+    ctx = AsyncMock()
+    ctx.report_progress = AsyncMock()
+    return ctx
+
+
+def _mock_config():
+    cfg = MagicMock()
+    cfg.tools.paths.hydra = ""
+    cfg.tools.defaults.scan_timeout = 300
+    return cfg
+
+
+def _setup_rate_limited_mock():
+    mock_rl_ctx = MagicMock()
+    mock_rl_ctx.__aenter__ = AsyncMock(return_value=MagicMock())
+    mock_rl_ctx.__aexit__ = AsyncMock(return_value=False)
+    return mock_rl_ctx
+
+
+# ---------------------------------------------------------------------------
+# TestHydraAttack — async tests for hydra_attack function
+# ---------------------------------------------------------------------------
+
+
+class TestHydraAttack:
+    async def test_hydra_blocked_target(self, mock_ctx):
+        """Allowlist raises — exception re-raised."""
+        from tengu.tools.bruteforce.hydra import hydra_attack
+
+        mock_rl_ctx = _setup_rate_limited_mock()
+        mock_audit = AsyncMock()
+        mock_audit.log_target_blocked = AsyncMock()
+        mock_audit.log_tool_call = AsyncMock()
+
+        with (
+            patch("tengu.tools.bruteforce.hydra.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hydra.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.bruteforce.hydra.resolve_tool_path", return_value="/usr/bin/hydra"),
+            patch("tengu.tools.bruteforce.hydra.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.bruteforce.hydra.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hydra.make_allowlist_from_config") as mock_allowlist,
+        ):
+            allowlist_instance = MagicMock()
+            allowlist_instance.check.side_effect = PermissionError("Target blocked")
+            mock_allowlist.return_value = allowlist_instance
+
+            with pytest.raises(PermissionError, match="Target blocked"):
+                await hydra_attack(mock_ctx, "192.168.1.1", "ssh", "/users.txt", "/pass.txt")
+
+    async def test_hydra_invalid_service(self, mock_ctx):
+        """Unsupported service returns error dict."""
+        from tengu.tools.bruteforce.hydra import hydra_attack
+
+        with patch("tengu.tools.bruteforce.hydra.get_config", return_value=_mock_config()):
+            result = await hydra_attack(mock_ctx, "192.168.1.1", "unsupportedprotocol", "/tmp/u.txt", "/tmp/p.txt")
+
+        assert "error" in result
+        assert "Unsupported service" in result["error"]
+
+    async def test_hydra_valid_service_ssh(self, mock_ctx):
+        """service='ssh' runs hydra successfully."""
+        from tengu.tools.bruteforce.hydra import hydra_attack
+
+        mock_rl_ctx = _setup_rate_limited_mock()
+        mock_audit = AsyncMock()
+        mock_audit.log_target_blocked = AsyncMock()
+        mock_audit.log_tool_call = AsyncMock()
+
+        with (
+            patch("tengu.tools.bruteforce.hydra.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hydra.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.bruteforce.hydra.resolve_tool_path", return_value="/usr/bin/hydra"),
+            patch("tengu.tools.bruteforce.hydra.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.bruteforce.hydra.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hydra.make_allowlist_from_config") as mock_allowlist,
+            patch("tengu.tools.bruteforce.hydra.run_command", AsyncMock(return_value=("output", "", 0))),
+        ):
+            mock_allowlist.return_value.check.return_value = None
+
+            result = await hydra_attack(mock_ctx, "192.168.1.1", "ssh", "/tmp/u.txt", "/tmp/p.txt")
+
+        assert result["tool"] == "hydra"
+        assert result["service"] == "ssh"
+
+    async def test_hydra_custom_port(self, mock_ctx):
+        """port=2222 includes -s 2222 in command args."""
+        from tengu.tools.bruteforce.hydra import hydra_attack
+
+        mock_rl_ctx = _setup_rate_limited_mock()
+        mock_audit = AsyncMock()
+        mock_audit.log_tool_call = AsyncMock()
+        captured_args: list = []
+
+        async def fake_run(args, timeout):
+            captured_args.extend(args)
+            return ("", "", 0)
+
+        with (
+            patch("tengu.tools.bruteforce.hydra.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hydra.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.bruteforce.hydra.resolve_tool_path", return_value="/usr/bin/hydra"),
+            patch("tengu.tools.bruteforce.hydra.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.bruteforce.hydra.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hydra.make_allowlist_from_config") as mock_allowlist,
+            patch("tengu.tools.bruteforce.hydra.run_command", fake_run),
+        ):
+            mock_allowlist.return_value.check.return_value = None
+            await hydra_attack(mock_ctx, "192.168.1.1", "ssh", "/tmp/u.txt", "/tmp/p.txt", port=2222)
+
+        assert "-s" in captured_args
+        assert "2222" in captured_args
+
+    async def test_hydra_threads_clamped(self, mock_ctx):
+        """threads=500 clamped to max 64."""
+        from tengu.tools.bruteforce.hydra import hydra_attack
+
+        mock_rl_ctx = _setup_rate_limited_mock()
+        mock_audit = AsyncMock()
+        mock_audit.log_tool_call = AsyncMock()
+        captured_args: list = []
+
+        async def fake_run(args, timeout):
+            captured_args.extend(args)
+            return ("", "", 0)
+
+        with (
+            patch("tengu.tools.bruteforce.hydra.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hydra.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.bruteforce.hydra.resolve_tool_path", return_value="/usr/bin/hydra"),
+            patch("tengu.tools.bruteforce.hydra.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.bruteforce.hydra.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hydra.make_allowlist_from_config") as mock_allowlist,
+            patch("tengu.tools.bruteforce.hydra.run_command", fake_run),
+        ):
+            mock_allowlist.return_value.check.return_value = None
+            await hydra_attack(mock_ctx, "192.168.1.1", "ssh", "/tmp/u.txt", "/tmp/p.txt", threads=500)
+
+        t_idx = captured_args.index("-t")
+        assert int(captured_args[t_idx + 1]) <= 64
+
+    async def test_hydra_stop_on_success(self, mock_ctx):
+        """stop_on_success=True includes -f flag in args."""
+        from tengu.tools.bruteforce.hydra import hydra_attack
+
+        mock_rl_ctx = _setup_rate_limited_mock()
+        mock_audit = AsyncMock()
+        mock_audit.log_tool_call = AsyncMock()
+        captured_args: list = []
+
+        async def fake_run(args, timeout):
+            captured_args.extend(args)
+            return ("", "", 0)
+
+        with (
+            patch("tengu.tools.bruteforce.hydra.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hydra.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.bruteforce.hydra.resolve_tool_path", return_value="/usr/bin/hydra"),
+            patch("tengu.tools.bruteforce.hydra.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.bruteforce.hydra.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hydra.make_allowlist_from_config") as mock_allowlist,
+            patch("tengu.tools.bruteforce.hydra.run_command", fake_run),
+        ):
+            mock_allowlist.return_value.check.return_value = None
+            await hydra_attack(mock_ctx, "192.168.1.1", "ssh", "/tmp/u.txt", "/tmp/p.txt", stop_on_success=True)
+
+        assert "-f" in captured_args
+
+    async def test_hydra_credentials_found(self, mock_ctx):
+        """Hydra output with valid credential line is parsed into credentials list."""
+        from tengu.tools.bruteforce.hydra import hydra_attack
+
+        mock_rl_ctx = _setup_rate_limited_mock()
+        mock_audit = AsyncMock()
+        mock_audit.log_tool_call = AsyncMock()
+        hydra_output = "[22][ssh][192.168.1.1:22] login: admin password: secret\n"
+
+        with (
+            patch("tengu.tools.bruteforce.hydra.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hydra.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.bruteforce.hydra.resolve_tool_path", return_value="/usr/bin/hydra"),
+            patch("tengu.tools.bruteforce.hydra.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.bruteforce.hydra.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hydra.make_allowlist_from_config") as mock_allowlist,
+            patch("tengu.tools.bruteforce.hydra.run_command", AsyncMock(return_value=(hydra_output, "", 0))),
+        ):
+            mock_allowlist.return_value.check.return_value = None
+            result = await hydra_attack(mock_ctx, "192.168.1.1", "ssh", "/tmp/u.txt", "/tmp/p.txt")
+
+        assert result["valid_credentials_found"] >= 1
+        assert result["credentials"][0]["username"] == "admin"
+        assert result["credentials"][0]["password"] == "secret"
+
+    async def test_hydra_no_credentials_found(self, mock_ctx):
+        """Output has no valid creds — credentials=[]."""
+        from tengu.tools.bruteforce.hydra import hydra_attack
+
+        mock_rl_ctx = _setup_rate_limited_mock()
+        mock_audit = AsyncMock()
+        mock_audit.log_tool_call = AsyncMock()
+
+        with (
+            patch("tengu.tools.bruteforce.hydra.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hydra.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.bruteforce.hydra.resolve_tool_path", return_value="/usr/bin/hydra"),
+            patch("tengu.tools.bruteforce.hydra.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.bruteforce.hydra.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hydra.make_allowlist_from_config") as mock_allowlist,
+            patch("tengu.tools.bruteforce.hydra.run_command", AsyncMock(return_value=("[ERROR] No passwords found", "", 1))),
+        ):
+            mock_allowlist.return_value.check.return_value = None
+            result = await hydra_attack(mock_ctx, "192.168.1.1", "ftp", "/tmp/u.txt", "/tmp/p.txt")
+
+        assert result["credentials"] == []
+        assert result["valid_credentials_found"] == 0
+
+    async def test_hydra_tool_key(self, mock_ctx):
+        """Result has tool='hydra'."""
+        from tengu.tools.bruteforce.hydra import hydra_attack
+
+        mock_rl_ctx = _setup_rate_limited_mock()
+        mock_audit = AsyncMock()
+        mock_audit.log_tool_call = AsyncMock()
+
+        with (
+            patch("tengu.tools.bruteforce.hydra.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hydra.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.bruteforce.hydra.resolve_tool_path", return_value="/usr/bin/hydra"),
+            patch("tengu.tools.bruteforce.hydra.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.bruteforce.hydra.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hydra.make_allowlist_from_config") as mock_allowlist,
+            patch("tengu.tools.bruteforce.hydra.run_command", AsyncMock(return_value=("", "", 0))),
+        ):
+            mock_allowlist.return_value.check.return_value = None
+            result = await hydra_attack(mock_ctx, "192.168.1.1", "ssh", "/tmp/u.txt", "/tmp/p.txt")
+
+        assert result["tool"] == "hydra"
+
+    async def test_hydra_audit_logged(self, mock_ctx):
+        """audit.log_tool_call is called."""
+        from tengu.tools.bruteforce.hydra import hydra_attack
+
+        mock_rl_ctx = _setup_rate_limited_mock()
+        mock_audit = AsyncMock()
+        mock_audit.log_tool_call = AsyncMock()
+
+        with (
+            patch("tengu.tools.bruteforce.hydra.get_config", return_value=_mock_config()),
+            patch("tengu.tools.bruteforce.hydra.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.bruteforce.hydra.resolve_tool_path", return_value="/usr/bin/hydra"),
+            patch("tengu.tools.bruteforce.hydra.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.bruteforce.hydra.sanitize_wordlist_path", side_effect=lambda x: x),
+            patch("tengu.tools.bruteforce.hydra.make_allowlist_from_config") as mock_allowlist,
+            patch("tengu.tools.bruteforce.hydra.run_command", AsyncMock(return_value=("", "", 0))),
+        ):
+            mock_allowlist.return_value.check.return_value = None
+            await hydra_attack(mock_ctx, "192.168.1.1", "ssh", "/tmp/u.txt", "/tmp/p.txt")
+
+        assert mock_audit.log_tool_call.call_count >= 1
 
 # ---------------------------------------------------------------------------
 # TestSupportedServices
