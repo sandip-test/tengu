@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from tengu.tools.ad.enum4linux import _parse_enum4linux_output, _parse_enum4linux_text
 
@@ -173,3 +176,257 @@ class TestParseEnum4linuxText:
         assert len(result["users"]) == 1
         assert len(result["shares"]) == 1
         assert len(result["groups"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# TestEnum4linuxScan
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_ctx():
+    ctx = MagicMock()
+    ctx.report_progress = AsyncMock()
+    return ctx
+
+
+def _make_enum4linux_mocks(
+    stdout: str = "{}",
+    run_raises: Exception | None = None,
+    which_returns: str | None = "/usr/bin/enum4linux-ng",
+):
+    """Build standard mocks for enum4linux_scan tests."""
+    mock_cfg = MagicMock()
+    mock_cfg.tools.defaults.scan_timeout = 300
+
+    mock_audit = MagicMock()
+    mock_audit.log_tool_call = AsyncMock()
+    mock_audit.log_target_blocked = AsyncMock()
+
+    mock_allowlist = MagicMock()
+    mock_allowlist.check.return_value = None
+
+    mock_rl = MagicMock()
+    mock_rl.__aenter__ = AsyncMock(return_value=MagicMock())
+    mock_rl.__aexit__ = AsyncMock(return_value=False)
+
+    if run_raises:
+        mock_run = AsyncMock(side_effect=run_raises)
+    else:
+        mock_run = AsyncMock(return_value=(stdout, "", 0))
+
+    return mock_cfg, mock_audit, mock_allowlist, mock_rl, mock_run
+
+
+class TestEnum4linuxScan:
+    async def test_allowlist_block_raises(self, mock_ctx):
+        mock_cfg, mock_audit, _, mock_rl, mock_run = _make_enum4linux_mocks()
+        mock_allowlist = MagicMock()
+        mock_allowlist.check.side_effect = Exception("Not allowed")
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            pytest.raises(Exception, match="Not allowed"),
+        ):
+            await enum4linux_scan(mock_ctx, "10.0.0.1")
+
+        mock_audit.log_target_blocked.assert_called_once()
+
+    async def test_enum4linux_ng_preferred_when_available(self, mock_ctx):
+        mock_cfg, mock_audit, mock_allowlist, mock_rl, _ = _make_enum4linux_mocks()
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            patch("tengu.tools.ad.enum4linux.shutil.which", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.resolve_tool_path", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.ad.enum4linux.run_command", new_callable=AsyncMock, return_value=("{}", "", 0)),
+        ):
+            result = await enum4linux_scan(mock_ctx, "10.0.0.1")
+
+        assert result["tool"] == "enum4linux-ng"
+
+    async def test_enum4linux_fallback_when_ng_not_found(self, mock_ctx):
+        mock_cfg, mock_audit, mock_allowlist, mock_rl, _ = _make_enum4linux_mocks()
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            patch("tengu.tools.ad.enum4linux.shutil.which", return_value=None),
+            patch("tengu.tools.ad.enum4linux.resolve_tool_path", return_value="/usr/bin/enum4linux"),
+            patch("tengu.tools.ad.enum4linux.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.ad.enum4linux.run_command", new_callable=AsyncMock, return_value=("{}", "", 0)),
+        ):
+            result = await enum4linux_scan(mock_ctx, "10.0.0.1")
+
+        assert result["tool"] == "enum4linux"
+
+    async def test_credentials_args_added_when_provided(self, mock_ctx):
+        captured_args: list = []
+
+        async def fake_run(args, **kw):
+            captured_args.extend(args)
+            return ("{}", "", 0)
+
+        mock_cfg, mock_audit, mock_allowlist, mock_rl, _ = _make_enum4linux_mocks()
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            patch("tengu.tools.ad.enum4linux.shutil.which", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.resolve_tool_path", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.ad.enum4linux.run_command", side_effect=fake_run),
+        ):
+            await enum4linux_scan(mock_ctx, "10.0.0.1", username="admin", password="secret")
+
+        assert "-u" in captured_args
+        assert "admin" in captured_args
+        assert "-p" in captured_args
+        assert "secret" in captured_args
+
+    async def test_no_credentials_args_when_not_provided(self, mock_ctx):
+        captured_args: list = []
+
+        async def fake_run(args, **kw):
+            captured_args.extend(args)
+            return ("{}", "", 0)
+
+        mock_cfg, mock_audit, mock_allowlist, mock_rl, _ = _make_enum4linux_mocks()
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            patch("tengu.tools.ad.enum4linux.shutil.which", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.resolve_tool_path", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.ad.enum4linux.run_command", side_effect=fake_run),
+        ):
+            await enum4linux_scan(mock_ctx, "10.0.0.1")
+
+        assert "-u" not in captured_args
+        assert "-p" not in captured_args
+
+    async def test_result_keys_present(self, mock_ctx):
+        mock_cfg, mock_audit, mock_allowlist, mock_rl, _ = _make_enum4linux_mocks()
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            patch("tengu.tools.ad.enum4linux.shutil.which", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.resolve_tool_path", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.ad.enum4linux.run_command", new_callable=AsyncMock, return_value=("{}", "", 0)),
+        ):
+            result = await enum4linux_scan(mock_ctx, "10.0.0.1")
+
+        for key in ("tool", "target", "authenticated", "command", "duration_seconds", "users", "groups", "shares", "password_policy", "os_info", "raw_output_excerpt"):
+            assert key in result, f"Missing key: {key}"
+
+    async def test_run_command_exception_propagates_with_audit_log(self, mock_ctx):
+        mock_cfg, mock_audit, mock_allowlist, mock_rl, _ = _make_enum4linux_mocks()
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            patch("tengu.tools.ad.enum4linux.shutil.which", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.resolve_tool_path", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.ad.enum4linux.run_command", new_callable=AsyncMock, side_effect=RuntimeError("subprocess failed")),
+            pytest.raises(RuntimeError, match="subprocess failed"),
+        ):
+            await enum4linux_scan(mock_ctx, "10.0.0.1")
+
+        calls = mock_audit.log_tool_call.call_args_list
+        assert any(c.kwargs.get("result") == "failed" for c in calls)
+
+    async def test_timeout_override(self, mock_ctx):
+        captured_kwargs: dict = {}
+
+        async def fake_run(args, **kw):
+            captured_kwargs.update(kw)
+            return ("{}", "", 0)
+
+        mock_cfg, mock_audit, mock_allowlist, mock_rl, _ = _make_enum4linux_mocks()
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            patch("tengu.tools.ad.enum4linux.shutil.which", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.resolve_tool_path", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.ad.enum4linux.run_command", side_effect=fake_run),
+        ):
+            await enum4linux_scan(mock_ctx, "10.0.0.1", timeout=120)
+
+        assert captured_kwargs.get("timeout") == 120
+
+    async def test_authenticated_false_when_no_credentials(self, mock_ctx):
+        mock_cfg, mock_audit, mock_allowlist, mock_rl, _ = _make_enum4linux_mocks()
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            patch("tengu.tools.ad.enum4linux.shutil.which", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.resolve_tool_path", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.ad.enum4linux.run_command", new_callable=AsyncMock, return_value=("{}", "", 0)),
+        ):
+            result = await enum4linux_scan(mock_ctx, "10.0.0.1")
+
+        assert result["authenticated"] is False
+
+    async def test_authenticated_true_when_credentials_provided(self, mock_ctx):
+        mock_cfg, mock_audit, mock_allowlist, mock_rl, _ = _make_enum4linux_mocks()
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            patch("tengu.tools.ad.enum4linux.shutil.which", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.resolve_tool_path", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.ad.enum4linux.run_command", new_callable=AsyncMock, return_value=("{}", "", 0)),
+        ):
+            result = await enum4linux_scan(mock_ctx, "10.0.0.1", username="admin", password="pass")
+
+        assert result["authenticated"] is True
+
+    async def test_raw_output_truncated_to_3000_chars(self, mock_ctx):
+        long_stdout = "Z" * 7000
+        mock_cfg, mock_audit, mock_allowlist, mock_rl, _ = _make_enum4linux_mocks()
+        from tengu.tools.ad.enum4linux import enum4linux_scan
+
+        with (
+            patch("tengu.tools.ad.enum4linux.get_config", return_value=mock_cfg),
+            patch("tengu.tools.ad.enum4linux.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.ad.enum4linux.make_allowlist_from_config", return_value=mock_allowlist),
+            patch("tengu.tools.ad.enum4linux.shutil.which", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.resolve_tool_path", return_value="/usr/bin/enum4linux-ng"),
+            patch("tengu.tools.ad.enum4linux.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.ad.enum4linux.run_command", new_callable=AsyncMock, return_value=(long_stdout, "", 0)),
+        ):
+            result = await enum4linux_scan(mock_ctx, "10.0.0.1")
+
+        assert len(result["raw_output_excerpt"]) == 3000

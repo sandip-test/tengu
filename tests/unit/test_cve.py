@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tengu.resources.cve import CVECache, _build_headers, _parse_cveorg, _parse_nvd_cve
+from tengu.resources import cve as cve_mod
+from tengu.resources.cve import (
+    CVECache,
+    _build_headers,
+    _parse_cveorg,
+    _parse_nvd_cve,
+    lookup_cve,
+    search_cves,
+)
 from tengu.types import CVERecord, CVSSMetrics
 
 # ---------------------------------------------------------------------------
@@ -381,3 +390,414 @@ class TestBuildHeaders:
     def test_with_api_key_has_accept_header(self):
         headers = _build_headers("my-api-key-123")
         assert headers["Accept"] == "application/json"
+
+
+# ---------------------------------------------------------------------------
+# Helpers for async tests
+# ---------------------------------------------------------------------------
+
+
+def _make_nvd_response(cve_id: str = "CVE-2021-44228", description: str = "Log4Shell") -> dict:
+    """Build a minimal NVD API HTTP response payload."""
+    return {
+        "vulnerabilities": [
+            {
+                "cve": {
+                    "id": cve_id,
+                    "published": "2021-12-09T00:00:00.000",
+                    "lastModified": "2021-12-15T00:00:00.000",
+                    "descriptions": [{"lang": "en", "value": description}],
+                    "metrics": {},
+                }
+            }
+        ]
+    }
+
+
+def _make_httpx_mock(response_data: dict) -> tuple:
+    """Return (mock_client, mock_class) for a single httpx call."""
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = response_data
+
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    mock_client_ctx = MagicMock()
+    mock_client_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client_ctx.__aexit__ = AsyncMock(return_value=False)
+
+    mock_class = MagicMock(return_value=mock_client_ctx)
+    return mock_client, mock_class
+
+
+# ---------------------------------------------------------------------------
+# TestGetCache
+# ---------------------------------------------------------------------------
+
+
+class TestGetCache:
+    def test_returns_cve_cache_instance(self, tmp_path):
+        cve_mod._cache = None
+        with patch("tengu.resources.cve.get_config") as mock_cfg:
+            mock_cfg.return_value.cve.cache_path = str(tmp_path / "cve.db")
+            cache = cve_mod._get_cache()
+        assert isinstance(cache, CVECache)
+
+    def test_singleton_returns_same_instance(self, tmp_path):
+        cve_mod._cache = None
+        with patch("tengu.resources.cve.get_config") as mock_cfg:
+            mock_cfg.return_value.cve.cache_path = str(tmp_path / "cve2.db")
+            first = cve_mod._get_cache()
+            second = cve_mod._get_cache()
+        assert first is second
+
+    def teardown_method(self, method):
+        # Reset global state between tests
+        cve_mod._cache = None
+
+
+# ---------------------------------------------------------------------------
+# TestRateLimitWait
+# ---------------------------------------------------------------------------
+
+
+class TestRateLimitWait:
+    async def test_no_sleep_when_no_previous_request(self):
+        cve_mod._last_request_time = 0.0
+        with patch("tengu.resources.cve.get_config") as mock_cfg:
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            mock_cfg.return_value.cve.cache_path = ":memory:"
+            # Should complete without error
+            await cve_mod._rate_limit_wait(has_api_key=False)
+
+    async def test_completes_without_error_with_api_key(self):
+        cve_mod._last_request_time = 0.0
+        with patch("tengu.resources.cve.get_config") as mock_cfg:
+            mock_cfg.return_value.cve.nvd_api_key = "some-key"
+            mock_cfg.return_value.cve.cache_path = ":memory:"
+            await cve_mod._rate_limit_wait(has_api_key=True)
+
+    async def test_updates_last_request_time(self):
+        import time
+        cve_mod._last_request_time = 0.0
+        before = time.monotonic()
+        with patch("tengu.resources.cve.get_config") as mock_cfg:
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            mock_cfg.return_value.cve.cache_path = ":memory:"
+            await cve_mod._rate_limit_wait(has_api_key=False)
+        assert cve_mod._last_request_time >= before
+
+
+# ---------------------------------------------------------------------------
+# TestLookupCve
+# ---------------------------------------------------------------------------
+
+
+class TestLookupCve:
+    async def test_cache_hit_returns_record(self, tmp_path):
+        db_path = str(tmp_path / "test.db")
+        cache = CVECache(db_path)
+        record = CVERecord(id="CVE-2021-44228", description="Log4Shell", published="2021-12-09", last_modified="2021-12-15")
+        cache.set_cve("CVE-2021-44228", record.model_dump(mode="json"))
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            result = await lookup_cve("CVE-2021-44228")
+
+        assert result is not None
+        assert result.id == "CVE-2021-44228"
+        assert result.description == "Log4Shell"
+
+    async def test_nvd_success_returns_record(self, tmp_path):
+        db_path = str(tmp_path / "nvd.db")
+        cache = CVECache(db_path)
+        _, mock_class = _make_httpx_mock(_make_nvd_response())
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+            patch("tengu.resources.cve.httpx.AsyncClient", mock_class),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            result = await lookup_cve("CVE-2021-44228")
+
+        assert result is not None
+        assert isinstance(result, CVERecord)
+        assert result.id == "CVE-2021-44228"
+
+    async def test_nvd_fail_fallback_to_cveorg(self, tmp_path):
+        import httpx
+
+        db_path = str(tmp_path / "fallback.db")
+        cache = CVECache(db_path)
+
+        cveorg_data = {
+            "cveMetadata": {
+                "cveId": "CVE-2021-44228",
+                "datePublished": "2021-12-09T00:00:00",
+                "dateUpdated": "2021-12-15T00:00:00",
+            },
+            "containers": {
+                "cna": {
+                    "descriptions": [{"lang": "en", "value": "Log4Shell from cve.org"}],
+                    "references": [],
+                }
+            },
+        }
+
+        # NVD call raises HTTPError, CVE.org succeeds
+        mock_nvd_response = MagicMock()
+        mock_nvd_response.raise_for_status.side_effect = httpx.HTTPError("NVD unavailable")
+
+        mock_cveorg_response = MagicMock()
+        mock_cveorg_response.raise_for_status = MagicMock()
+        mock_cveorg_response.json.return_value = cveorg_data
+
+        call_count = 0
+
+        async def fake_get(url, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return mock_nvd_response
+            return mock_cveorg_response
+
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=fake_get)
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        mock_class = MagicMock(return_value=mock_ctx)
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+            patch("tengu.resources.cve.httpx.AsyncClient", mock_class),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            result = await lookup_cve("CVE-2021-44228")
+
+        assert result is not None
+        assert result.id == "CVE-2021-44228"
+
+    async def test_both_fail_returns_none(self, tmp_path):
+        import httpx
+
+        db_path = str(tmp_path / "bothfail.db")
+        cache = CVECache(db_path)
+
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPError("unavailable")
+
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(return_value=mock_response)
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        mock_class = MagicMock(return_value=mock_ctx)
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+            patch("tengu.resources.cve.httpx.AsyncClient", mock_class),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            result = await lookup_cve("CVE-2021-44228")
+
+        assert result is None
+
+    async def test_nvd_empty_vulnerabilities_returns_none(self, tmp_path):
+        db_path = str(tmp_path / "empty.db")
+        cache = CVECache(db_path)
+        _, mock_class = _make_httpx_mock({"vulnerabilities": []})
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+            patch("tengu.resources.cve.httpx.AsyncClient", mock_class),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            result = await lookup_cve("CVE-2021-44228")
+
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# TestSearchCves
+# ---------------------------------------------------------------------------
+
+
+class TestSearchCves:
+    async def test_cache_hit_returns_records(self, tmp_path):
+        db_path = str(tmp_path / "search_cache.db")
+        cache = CVECache(db_path)
+        record = CVERecord(id="CVE-2021-44228", description="Log4Shell", published="2021-12-09", last_modified="2021-12-15")
+        query_key = "log4j:None:None:None:20"
+        cache.set_search(query_key, {"records": [record.model_dump(mode="json")]})
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            results = await search_cves(keyword="log4j")
+
+        assert len(results) == 1
+        assert results[0].id == "CVE-2021-44228"
+
+    async def test_nvd_success_returns_records(self, tmp_path):
+        db_path = str(tmp_path / "search_nvd.db")
+        cache = CVECache(db_path)
+        response_data = _make_nvd_response()
+        _, mock_class = _make_httpx_mock(response_data)
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+            patch("tengu.resources.cve.httpx.AsyncClient", mock_class),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            results = await search_cves(keyword="log4j")
+
+        assert len(results) == 1
+        assert isinstance(results[0], CVERecord)
+
+    async def test_error_returns_empty_list(self, tmp_path):
+        db_path = str(tmp_path / "search_err.db")
+        cache = CVECache(db_path)
+
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=Exception("network error"))
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        mock_class = MagicMock(return_value=mock_ctx)
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+            patch("tengu.resources.cve.httpx.AsyncClient", mock_class),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            results = await search_cves(keyword="log4j")
+
+        assert results == []
+
+    async def test_severity_filter_included_in_params(self, tmp_path):
+        db_path = str(tmp_path / "search_sev.db")
+        cache = CVECache(db_path)
+        captured_params: dict = {}
+
+        async def fake_get(url, params=None, **kwargs):
+            if params:
+                captured_params.update(params)
+            mock_resp = MagicMock()
+            mock_resp.raise_for_status = MagicMock()
+            mock_resp.json.return_value = {"vulnerabilities": []}
+            return mock_resp
+
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=fake_get)
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        mock_class = MagicMock(return_value=mock_ctx)
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+            patch("tengu.resources.cve.httpx.AsyncClient", mock_class),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            await search_cves(keyword="test", severity="critical")
+
+        assert "cvssV3Severity" in captured_params
+        assert captured_params["cvssV3Severity"] == "CRITICAL"
+
+    async def test_days_back_builds_date_range(self, tmp_path):
+        db_path = str(tmp_path / "search_days.db")
+        cache = CVECache(db_path)
+        captured_params: dict = {}
+
+        async def fake_get(url, params=None, **kwargs):
+            if params:
+                captured_params.update(params)
+            mock_resp = MagicMock()
+            mock_resp.raise_for_status = MagicMock()
+            mock_resp.json.return_value = {"vulnerabilities": []}
+            return mock_resp
+
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=fake_get)
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        mock_class = MagicMock(return_value=mock_ctx)
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+            patch("tengu.resources.cve.httpx.AsyncClient", mock_class),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            await search_cves(keyword="test", days_back=7)
+
+        assert "pubStartDate" in captured_params
+        assert "pubEndDate" in captured_params
+
+    async def test_keyword_included_in_params(self, tmp_path):
+        db_path = str(tmp_path / "search_kw.db")
+        cache = CVECache(db_path)
+        captured_params: dict = {}
+
+        async def fake_get(url, params=None, **kwargs):
+            if params:
+                captured_params.update(params)
+            mock_resp = MagicMock()
+            mock_resp.raise_for_status = MagicMock()
+            mock_resp.json.return_value = {"vulnerabilities": []}
+            return mock_resp
+
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=fake_get)
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+        mock_class = MagicMock(return_value=mock_ctx)
+
+        with (
+            patch("tengu.resources.cve._get_cache", return_value=cache),
+            patch("tengu.resources.cve.get_config") as mock_cfg,
+            patch("tengu.resources.cve._rate_limit_wait", new_callable=AsyncMock),
+            patch("tengu.resources.cve.httpx.AsyncClient", mock_class),
+        ):
+            mock_cfg.return_value.cve.cache_ttl_hours = 24
+            mock_cfg.return_value.cve.nvd_api_key = ""
+            await search_cves(keyword="apache")
+
+        assert "keywordSearch" in captured_params
+        assert captured_params["keywordSearch"] == "apache"

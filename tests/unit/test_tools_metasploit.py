@@ -385,3 +385,378 @@ class TestMsfSessionsList:
 
         assert result["count"] == 0
         assert result["sessions"] == []
+
+
+# ---------------------------------------------------------------------------
+# TestSearchModulesInternal
+# ---------------------------------------------------------------------------
+
+
+class TestSearchModulesInternal:
+    def test_returns_all_modules_when_type_all(self):
+        mock_client = _make_msf_client(
+            modules=[
+                {
+                    "fullname": "exploit/test",
+                    "type": "exploit",
+                    "name": "Test",
+                    "rank": "great",
+                    "description": "desc",
+                    "disclosure_date": "",
+                    "references": [],
+                },
+                {
+                    "fullname": "auxiliary/aux",
+                    "type": "auxiliary",
+                    "name": "Aux",
+                    "rank": "normal",
+                    "description": "aux desc",
+                    "disclosure_date": "",
+                    "references": [],
+                },
+            ]
+        )
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _search_modules
+
+            results = _search_modules("test", "all")
+
+        assert len(results) == 2
+
+    def test_filters_by_module_type(self):
+        mock_client = _make_msf_client(
+            modules=[
+                {
+                    "fullname": "exploit/test",
+                    "type": "exploit",
+                    "name": "Test",
+                    "rank": "great",
+                    "description": "desc",
+                    "disclosure_date": "",
+                    "references": [],
+                },
+                {
+                    "fullname": "auxiliary/aux",
+                    "type": "auxiliary",
+                    "name": "Aux",
+                    "rank": "normal",
+                    "description": "aux",
+                    "disclosure_date": "",
+                    "references": [],
+                },
+            ]
+        )
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _search_modules
+
+            results = _search_modules("test", "exploit")
+
+        assert len(results) == 1
+        assert results[0]["type"] == "exploit"
+
+    def test_skips_modules_not_matching_type(self):
+        mock_client = _make_msf_client(
+            modules=[
+                {
+                    "fullname": "post/multi/recon/local_exploit_suggester",
+                    "type": "post",
+                    "name": "Post module",
+                    "rank": "normal",
+                    "description": "post",
+                    "disclosure_date": "",
+                    "references": [],
+                }
+            ]
+        )
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _search_modules
+
+            results = _search_modules("test", "exploit")
+
+        assert len(results) == 0
+
+    def test_result_contains_expected_keys(self):
+        mock_client = _make_msf_client(
+            modules=[
+                {
+                    "fullname": "exploit/test",
+                    "type": "exploit",
+                    "name": "Test",
+                    "rank": "great",
+                    "description": "desc",
+                    "disclosure_date": "2020-01-01",
+                    "references": ["CVE-2020-1234"],
+                }
+            ]
+        )
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _search_modules
+
+            results = _search_modules("test", "all")
+
+        assert len(results) == 1
+        for key in ("fullname", "name", "type", "rank", "description", "disclosure_date", "references"):
+            assert key in results[0]
+
+    def test_references_capped_at_5(self):
+        mock_client = _make_msf_client(
+            modules=[
+                {
+                    "fullname": "exploit/test",
+                    "type": "exploit",
+                    "name": "Test",
+                    "rank": "great",
+                    "description": "desc",
+                    "disclosure_date": "",
+                    "references": [f"CVE-2020-{i}" for i in range(10)],
+                }
+            ]
+        )
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _search_modules
+
+            results = _search_modules("test", "all")
+
+        assert len(results[0]["references"]) <= 5
+
+
+# ---------------------------------------------------------------------------
+# TestGetModuleInfoInternal
+# ---------------------------------------------------------------------------
+
+
+class TestGetModuleInfoInternal:
+    def test_returns_module_info_dict(self):
+        mock_module = MagicMock()
+        mock_module.name = "EternalBlue"
+        mock_module.description = "SMB exploit"
+        mock_module.references = ["CVE-2017-0144"]
+        mock_module.options = {
+            "RHOSTS": {"required": True, "desc": "Target host", "default": "", "type": "string"}
+        }
+        mock_module.targets = {0: "Windows 7", 1: "Windows 10"}
+        mock_module.rank = "great"
+
+        mock_client = MagicMock()
+        mock_client.modules.use.return_value = mock_module
+
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _get_module_info
+
+            result = _get_module_info("exploit/windows/smb/ms17_010_eternalblue")
+
+        assert result["name"] == "EternalBlue"
+        assert result["description"] == "SMB exploit"
+        assert "RHOSTS" in result["options"]
+        assert result["rank"] == "great"
+
+    def test_options_parsed_with_required_flag(self):
+        mock_module = MagicMock()
+        mock_module.name = "Test"
+        mock_module.description = "test"
+        mock_module.references = []
+        mock_module.options = {
+            "RHOSTS": {"required": True, "desc": "Target", "default": "", "type": "string"},
+            "PORT": {"required": False, "desc": "Port", "default": "445", "type": "integer"},
+        }
+        mock_module.targets = {}
+        mock_module.rank = "normal"
+
+        mock_client = MagicMock()
+        mock_client.modules.use.return_value = mock_module
+
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _get_module_info
+
+            result = _get_module_info("exploit/test")
+
+        assert result["options"]["RHOSTS"]["required"] is True
+        assert result["options"]["PORT"]["required"] is False
+
+    def test_exception_returns_error_dict(self):
+        mock_client = MagicMock()
+        mock_client.modules.use.side_effect = Exception("Module not found")
+
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _get_module_info
+
+            result = _get_module_info("exploit/invalid/module")
+
+        assert "error" in result
+
+    def test_targets_parsed_as_list(self):
+        mock_module = MagicMock()
+        mock_module.name = "Test"
+        mock_module.description = "test"
+        mock_module.references = []
+        mock_module.options = {}
+        mock_module.targets = {0: "Windows 7", 1: "Windows 10", 2: "Windows Server 2016"}
+        mock_module.rank = "great"
+
+        mock_client = MagicMock()
+        mock_client.modules.use.return_value = mock_module
+
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _get_module_info
+
+            result = _get_module_info("exploit/windows/smb/test")
+
+        assert isinstance(result["targets"], list)
+        assert len(result["targets"]) == 3
+
+
+# ---------------------------------------------------------------------------
+# TestRunModuleInternal
+# ---------------------------------------------------------------------------
+
+
+class TestRunModuleInternal:
+    def test_exploit_module_uses_execute_with_payload(self):
+        mock_module = MagicMock()
+        mock_module.execute.return_value = {"job_id": 1, "uuid": "abc"}
+
+        mock_client = MagicMock()
+        mock_client.modules.use.return_value = mock_module
+
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _run_module
+
+            _run_module("exploit/windows/smb/ms17_010_eternalblue", {}, 0)
+
+        mock_module.execute.assert_called_once()
+        call_kwargs = mock_module.execute.call_args
+        assert "payload" in call_kwargs.kwargs
+
+    def test_non_exploit_module_uses_execute_without_payload(self):
+        mock_module = MagicMock()
+        mock_module.execute.return_value = {"job_id": 2, "uuid": "def"}
+
+        mock_client = MagicMock()
+        mock_client.modules.use.return_value = mock_module
+
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _run_module
+
+            _run_module("auxiliary/scanner/smb/smb_ms17_010", {}, 0)
+
+        mock_module.execute.assert_called_once()
+        call_kwargs = mock_module.execute.call_args
+        assert "payload" not in call_kwargs.kwargs
+
+    def test_success_returns_success_true(self):
+        mock_module = MagicMock()
+        mock_module.execute.return_value = {"job_id": 42, "uuid": "deadbeef"}
+
+        mock_client = MagicMock()
+        mock_client.modules.use.return_value = mock_module
+
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _run_module
+
+            result = _run_module("exploit/test", {}, 0)
+
+        assert result["success"] is True
+        assert result["job_id"] == 42
+        assert result["uuid"] == "deadbeef"
+
+    def test_exception_returns_success_false(self):
+        mock_module = MagicMock()
+        mock_module.execute.side_effect = Exception("exploit failed")
+
+        mock_client = MagicMock()
+        mock_client.modules.use.return_value = mock_module
+
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _run_module
+
+            result = _run_module("exploit/test", {}, 0)
+
+        assert result["success"] is False
+        assert "error" in result
+
+    def test_options_set_on_module(self):
+        mock_module = MagicMock()
+        mock_module.execute.return_value = {"job_id": 1, "uuid": "abc"}
+
+        mock_client = MagicMock()
+        mock_client.modules.use.return_value = mock_module
+
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _run_module
+
+            _run_module("exploit/test", {"RHOSTS": "192.168.1.1", "LHOST": "10.0.0.1"}, 0)
+
+        # Verify options were set on the module object
+        mock_module.__setitem__.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# TestListSessionsInternal
+# ---------------------------------------------------------------------------
+
+
+class TestListSessionsInternal:
+    def test_returns_session_list(self):
+        mock_client = _make_msf_client(
+            sessions={
+                "1": {
+                    "type": "meterpreter",
+                    "target_host": "192.168.1.10",
+                    "tunnel_peer": "192.168.1.100:4444",
+                    "platform": "windows",
+                    "arch": "x64",
+                    "info": "NT AUTHORITY\\SYSTEM",
+                }
+            }
+        )
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _list_sessions
+
+            sessions = _list_sessions()
+
+        assert len(sessions) == 1
+        assert sessions[0]["type"] == "meterpreter"
+        assert sessions[0]["target_host"] == "192.168.1.10"
+
+    def test_empty_sessions_returns_empty_list(self):
+        mock_client = _make_msf_client(sessions={})
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _list_sessions
+
+            sessions = _list_sessions()
+
+        assert sessions == []
+
+    def test_exception_during_iteration_returns_empty_list(self):
+        mock_client = MagicMock()
+        mock_client.sessions.list.items.side_effect = Exception("session error")
+
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _list_sessions
+
+            sessions = _list_sessions()
+
+        # The function catches exceptions and returns empty list
+        assert sessions == []
+
+    def test_session_contains_expected_keys(self):
+        mock_client = _make_msf_client(
+            sessions={
+                "5": {
+                    "type": "shell",
+                    "target_host": "10.0.0.5",
+                    "tunnel_peer": "10.0.0.1:5555",
+                    "platform": "linux",
+                    "arch": "x64",
+                    "info": "root",
+                }
+            }
+        )
+        with patch("tengu.tools.exploit.metasploit._get_msf_client", return_value=mock_client):
+            from tengu.tools.exploit.metasploit import _list_sessions
+
+            sessions = _list_sessions()
+
+        assert len(sessions) == 1
+        for key in ("id", "type", "target_host", "tunnel_peer", "platform", "arch", "info"):
+            assert key in sessions[0]
