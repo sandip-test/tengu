@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from tengu.tools.cloud.scoutsuite import _VALID_PROVIDERS, _parse_scoutsuite_report
 
@@ -205,3 +208,259 @@ class TestParseScoutsuiteReport:
             _write_results(tmp, data)
             result = _parse_scoutsuite_report(tmp)
         assert "rds" in result["services"]
+
+
+# ---------------------------------------------------------------------------
+# TestScoutsuiteScan
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_ctx():
+    ctx = MagicMock()
+    ctx.report_progress = AsyncMock()
+    return ctx
+
+
+def _make_scout_mocks(stdout: str = "", run_raises: Exception | None = None):
+    """Build standard mocks for scoutsuite_scan tests."""
+    mock_cfg = MagicMock()
+    mock_cfg.tools.defaults.scan_timeout = 300
+
+    mock_audit = MagicMock()
+    mock_audit.log_tool_call = AsyncMock()
+
+    mock_rl = MagicMock()
+    mock_rl.__aenter__ = AsyncMock(return_value=MagicMock())
+    mock_rl.__aexit__ = AsyncMock(return_value=False)
+
+    if run_raises:
+        mock_run = AsyncMock(side_effect=run_raises)
+    else:
+        mock_run = AsyncMock(return_value=(stdout, "", 0))
+
+    return mock_cfg, mock_audit, mock_rl, mock_run
+
+
+class TestScoutsuiteScan:
+    async def test_invalid_provider_returns_error_dict(self, mock_ctx):
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        result = await scoutsuite_scan(mock_ctx, "invalid_cloud")
+        assert result["tool"] == "scoutsuite"
+        assert "error" in result
+        assert "invalid_cloud" in result["error"]
+
+    async def test_invalid_provider_no_run_command_called(self, mock_ctx):
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        mock_run = AsyncMock()
+        with patch("tengu.tools.cloud.scoutsuite.run_command", mock_run):
+            await scoutsuite_scan(mock_ctx, "not_a_provider")
+
+        mock_run.assert_not_called()
+
+    async def test_valid_provider_aws_builds_correct_args(self, mock_ctx):
+        captured_args: list = []
+
+        async def fake_run(args, **kw):
+            captured_args.extend(args)
+            return ("", "", 0)
+
+        mock_cfg, mock_audit, mock_rl, _ = _make_scout_mocks()
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        with (
+            patch("tengu.tools.cloud.scoutsuite.get_config", return_value=mock_cfg),
+            patch("tengu.tools.cloud.scoutsuite.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.cloud.scoutsuite.resolve_tool_path", return_value="scout"),
+            patch("tengu.tools.cloud.scoutsuite.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.cloud.scoutsuite.run_command", side_effect=fake_run),
+            patch("tengu.tools.cloud.scoutsuite._parse_scoutsuite_report", return_value={"parsed": False}),
+        ):
+            result = await scoutsuite_scan(mock_ctx, "aws")
+
+        assert result["tool"] == "scoutsuite"
+        assert result["provider"] == "aws"
+        assert "aws" in captured_args
+        assert "--no-browser" in captured_args
+
+    async def test_aws_with_profile_adds_profile_flag(self, mock_ctx):
+        captured_args: list = []
+
+        async def fake_run(args, **kw):
+            captured_args.extend(args)
+            return ("", "", 0)
+
+        mock_cfg, mock_audit, mock_rl, _ = _make_scout_mocks()
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        with (
+            patch("tengu.tools.cloud.scoutsuite.get_config", return_value=mock_cfg),
+            patch("tengu.tools.cloud.scoutsuite.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.cloud.scoutsuite.resolve_tool_path", return_value="scout"),
+            patch("tengu.tools.cloud.scoutsuite.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.cloud.scoutsuite.run_command", side_effect=fake_run),
+            patch("tengu.tools.cloud.scoutsuite._parse_scoutsuite_report", return_value={"parsed": False}),
+        ):
+            await scoutsuite_scan(mock_ctx, "aws", profile="myprofile")
+
+        assert "--profile" in captured_args
+        assert "myprofile" in captured_args
+
+    async def test_gcp_with_project_adds_project_flag(self, mock_ctx):
+        captured_args: list = []
+
+        async def fake_run(args, **kw):
+            captured_args.extend(args)
+            return ("", "", 0)
+
+        mock_cfg, mock_audit, mock_rl, _ = _make_scout_mocks()
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        with (
+            patch("tengu.tools.cloud.scoutsuite.get_config", return_value=mock_cfg),
+            patch("tengu.tools.cloud.scoutsuite.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.cloud.scoutsuite.resolve_tool_path", return_value="scout"),
+            patch("tengu.tools.cloud.scoutsuite.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.cloud.scoutsuite.run_command", side_effect=fake_run),
+            patch("tengu.tools.cloud.scoutsuite._parse_scoutsuite_report", return_value={"parsed": False}),
+        ):
+            await scoutsuite_scan(mock_ctx, "gcp", project="my-gcp-project")
+
+        assert "--project" in captured_args
+        assert "my-gcp-project" in captured_args
+
+    async def test_azure_with_subscription_adds_subscription_flag(self, mock_ctx):
+        captured_args: list = []
+
+        async def fake_run(args, **kw):
+            captured_args.extend(args)
+            return ("", "", 0)
+
+        mock_cfg, mock_audit, mock_rl, _ = _make_scout_mocks()
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        with (
+            patch("tengu.tools.cloud.scoutsuite.get_config", return_value=mock_cfg),
+            patch("tengu.tools.cloud.scoutsuite.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.cloud.scoutsuite.resolve_tool_path", return_value="scout"),
+            patch("tengu.tools.cloud.scoutsuite.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.cloud.scoutsuite.run_command", side_effect=fake_run),
+            patch("tengu.tools.cloud.scoutsuite._parse_scoutsuite_report", return_value={"parsed": False}),
+        ):
+            await scoutsuite_scan(mock_ctx, "azure", subscription="sub-1234")
+
+        assert "--subscription" in captured_args
+        assert "sub-1234" in captured_args
+
+    async def test_run_command_exception_propagates(self, mock_ctx):
+        mock_cfg, mock_audit, mock_rl, _ = _make_scout_mocks(
+            run_raises=RuntimeError("command failed")
+        )
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        with (
+            patch("tengu.tools.cloud.scoutsuite.get_config", return_value=mock_cfg),
+            patch("tengu.tools.cloud.scoutsuite.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.cloud.scoutsuite.resolve_tool_path", return_value="scout"),
+            patch("tengu.tools.cloud.scoutsuite.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.cloud.scoutsuite.run_command", new_callable=AsyncMock, side_effect=RuntimeError("command failed")),
+            pytest.raises(RuntimeError, match="command failed"),
+        ):
+            await scoutsuite_scan(mock_ctx, "aws")
+
+    async def test_result_keys_present(self, mock_ctx):
+        mock_cfg, mock_audit, mock_rl, _ = _make_scout_mocks()
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        with (
+            patch("tengu.tools.cloud.scoutsuite.get_config", return_value=mock_cfg),
+            patch("tengu.tools.cloud.scoutsuite.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.cloud.scoutsuite.resolve_tool_path", return_value="scout"),
+            patch("tengu.tools.cloud.scoutsuite.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.cloud.scoutsuite.run_command", new_callable=AsyncMock, return_value=("", "", 0)),
+            patch("tengu.tools.cloud.scoutsuite._parse_scoutsuite_report", return_value={"parsed": False}),
+        ):
+            result = await scoutsuite_scan(mock_ctx, "aws")
+
+        for key in ("tool", "provider", "report_dir", "command", "duration_seconds", "summary", "raw_output_excerpt"):
+            assert key in result, f"Missing key: {key}"
+
+    async def test_raw_output_truncated_to_3000_chars(self, mock_ctx):
+        long_stdout = "Y" * 6000
+        mock_cfg, mock_audit, mock_rl, _ = _make_scout_mocks()
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        with (
+            patch("tengu.tools.cloud.scoutsuite.get_config", return_value=mock_cfg),
+            patch("tengu.tools.cloud.scoutsuite.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.cloud.scoutsuite.resolve_tool_path", return_value="scout"),
+            patch("tengu.tools.cloud.scoutsuite.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.cloud.scoutsuite.run_command", new_callable=AsyncMock, return_value=(long_stdout, "", 0)),
+            patch("tengu.tools.cloud.scoutsuite._parse_scoutsuite_report", return_value={"parsed": False}),
+        ):
+            result = await scoutsuite_scan(mock_ctx, "aws")
+
+        assert len(result["raw_output_excerpt"]) == 3000
+
+    async def test_timeout_override_used(self, mock_ctx):
+        captured_kwargs: dict = {}
+
+        async def fake_run(args, **kw):
+            captured_kwargs.update(kw)
+            return ("", "", 0)
+
+        mock_cfg, mock_audit, mock_rl, _ = _make_scout_mocks()
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        with (
+            patch("tengu.tools.cloud.scoutsuite.get_config", return_value=mock_cfg),
+            patch("tengu.tools.cloud.scoutsuite.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.cloud.scoutsuite.resolve_tool_path", return_value="scout"),
+            patch("tengu.tools.cloud.scoutsuite.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.cloud.scoutsuite.run_command", side_effect=fake_run),
+            patch("tengu.tools.cloud.scoutsuite._parse_scoutsuite_report", return_value={"parsed": False}),
+        ):
+            await scoutsuite_scan(mock_ctx, "aws", timeout=1800)
+
+        assert captured_kwargs.get("timeout") == 1800
+
+    async def test_aws_without_profile_no_profile_flag(self, mock_ctx):
+        captured_args: list = []
+
+        async def fake_run(args, **kw):
+            captured_args.extend(args)
+            return ("", "", 0)
+
+        mock_cfg, mock_audit, mock_rl, _ = _make_scout_mocks()
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        with (
+            patch("tengu.tools.cloud.scoutsuite.get_config", return_value=mock_cfg),
+            patch("tengu.tools.cloud.scoutsuite.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.cloud.scoutsuite.resolve_tool_path", return_value="scout"),
+            patch("tengu.tools.cloud.scoutsuite.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.cloud.scoutsuite.run_command", side_effect=fake_run),
+            patch("tengu.tools.cloud.scoutsuite._parse_scoutsuite_report", return_value={"parsed": False}),
+        ):
+            await scoutsuite_scan(mock_ctx, "aws")
+
+        assert "--profile" not in captured_args
+
+    async def test_duration_seconds_in_result(self, mock_ctx):
+        mock_cfg, mock_audit, mock_rl, _ = _make_scout_mocks()
+        from tengu.tools.cloud.scoutsuite import scoutsuite_scan
+
+        with (
+            patch("tengu.tools.cloud.scoutsuite.get_config", return_value=mock_cfg),
+            patch("tengu.tools.cloud.scoutsuite.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.cloud.scoutsuite.resolve_tool_path", return_value="scout"),
+            patch("tengu.tools.cloud.scoutsuite.rate_limited", return_value=mock_rl),
+            patch("tengu.tools.cloud.scoutsuite.run_command", new_callable=AsyncMock, return_value=("", "", 0)),
+            patch("tengu.tools.cloud.scoutsuite._parse_scoutsuite_report", return_value={"parsed": False}),
+        ):
+            result = await scoutsuite_scan(mock_ctx, "gcp")
+
+        assert isinstance(result["duration_seconds"], float | int)
+        assert result["duration_seconds"] >= 0
