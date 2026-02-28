@@ -100,20 +100,38 @@ make test
 
 ## Claude Code Configuration
 
-Claude Code reads MCP server configuration from `~/.claude/settings.json`.
+> **Important:** Claude Code reads MCP server configuration from **`~/.claude.json`**, not
+> from `~/.claude/settings.json`. The recommended way to register servers is via the
+> `claude mcp add` CLI — it writes to the correct file automatically.
 
 ### Basic Configuration (stdio transport)
+
+Use the `claude mcp add` command with `--scope user` to register Tengu globally
+(available in all projects):
+
+```bash
+claude mcp add --scope user tengu \
+  uv -- run --directory /absolute/path/to/tengu tengu
+```
+
+Or manually set environment variables:
+
+```bash
+claude mcp add --scope user \
+  --env TENGU_CONFIG_PATH=/absolute/path/to/tengu/tengu.toml \
+  tengu \
+  uv -- run --directory /absolute/path/to/tengu tengu
+```
+
+The command writes an entry like this to `~/.claude.json`:
 
 ```json
 {
   "mcpServers": {
     "tengu": {
+      "type": "stdio",
       "command": "uv",
-      "args": [
-        "run",
-        "--directory", "/absolute/path/to/tengu",
-        "tengu"
-      ],
+      "args": ["run", "--directory", "/absolute/path/to/tengu", "tengu"],
       "env": {
         "TENGU_CONFIG_PATH": "/absolute/path/to/tengu/tengu.toml"
       }
@@ -126,47 +144,33 @@ Replace `/absolute/path/to/tengu` with the actual absolute path to your clone.
 
 ### With NVD API Key
 
-```json
-{
-  "mcpServers": {
-    "tengu": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory", "/absolute/path/to/tengu",
-        "tengu"
-      ],
-      "env": {
-        "TENGU_CONFIG_PATH": "/absolute/path/to/tengu/tengu.toml",
-        "NVD_API_KEY": "your-nvd-api-key-here"
-      }
-    }
-  }
-}
+```bash
+claude mcp add --scope user \
+  --env TENGU_CONFIG_PATH=/absolute/path/to/tengu/tengu.toml \
+  --env NVD_API_KEY=your-nvd-api-key-here \
+  tengu \
+  uv -- run --directory /absolute/path/to/tengu tengu
 ```
 
 ### With Debug Logging
 
-```json
-{
-  "mcpServers": {
-    "tengu": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory", "/absolute/path/to/tengu",
-        "tengu"
-      ],
-      "env": {
-        "TENGU_CONFIG_PATH": "/absolute/path/to/tengu/tengu.toml",
-        "TENGU_LOG_LEVEL": "DEBUG"
-      }
-    }
-  }
-}
+```bash
+claude mcp add --scope user \
+  --env TENGU_CONFIG_PATH=/absolute/path/to/tengu/tengu.toml \
+  --env TENGU_LOG_LEVEL=DEBUG \
+  tengu \
+  uv -- run --directory /absolute/path/to/tengu tengu
 ```
 
-After editing `settings.json`, restart Claude Code or run `/mcp` to reload servers.
+### Useful CLI Commands
+
+```bash
+claude mcp list                 # list all registered MCP servers
+claude mcp remove tengu         # remove a server
+claude mcp get tengu            # show details for a specific server
+```
+
+After adding a server, restart Claude Code or open a new session for it to connect.
 
 ---
 
@@ -177,11 +181,16 @@ Claude Desktop reads MCP configuration from:
 - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 - Linux: `~/.config/Claude/claude_desktop_config.json`
 
+> **Important:** Claude Desktop validates that a `command` field is present. It does **not**
+> accept a bare `url` field for remote servers — that schema fails validation at startup.
+
+### Local (stdio) — Tengu running on the same machine
+
 ```json
 {
   "mcpServers": {
     "tengu": {
-      "command": "uv",
+      "command": "/absolute/path/to/uv",
       "args": [
         "run",
         "--directory", "/absolute/path/to/tengu",
@@ -194,6 +203,13 @@ Claude Desktop reads MCP configuration from:
   }
 }
 ```
+
+Use the full path to `uv` (find it with `which uv`) to avoid PATH issues.
+
+### Remote (SSE) — Tengu running on a Kali VM
+
+See the [SSE Mode section](#sse-mode-macos-host--kali-vm) below for the full setup.
+In short: create a wrapper script and point Claude Desktop at it.
 
 Restart Claude Desktop after editing the config file.
 
@@ -237,21 +253,31 @@ uv run tengu --transport sse
 
 ### Configure Claude Code for SSE
 
-On the macOS host, in `~/.claude/settings.json`:
+On the macOS host, use `claude mcp add` with `--transport sse`:
+
+```bash
+claude mcp add --transport sse --scope user tengu http://KALI_VM_IP:8000/sse
+```
+
+Replace `KALI_VM_IP` with the actual IP of your Kali VM (e.g., `192.168.64.5`
+for UTM, `192.168.56.101` for VirtualBox host-only).
+
+This writes the following entry to `~/.claude.json`:
 
 ```json
 {
   "mcpServers": {
-    "tengu-kali": {
-      "url": "http://KALI_VM_IP:8000/sse",
-      "transport": "sse"
+    "tengu": {
+      "type": "sse",
+      "url": "http://KALI_VM_IP:8000/sse"
     }
   }
 }
 ```
 
-Replace `KALI_VM_IP` with the actual IP of your Kali VM (e.g., `192.168.56.101`
-for a VirtualBox host-only network).
+> **Note:** Do not edit `~/.claude/settings.json` to add MCP servers — that file
+> is for other Claude Code settings. The `mcpServers` key there is ignored for
+> MCP registration. Always use `claude mcp add` or edit `~/.claude.json` directly.
 
 ---
 
@@ -414,18 +440,68 @@ cd /opt/tengu
 uv run tengu --transport sse --host 0.0.0.0 --port 8000
 ```
 
-**On macOS host**, edit `~/.claude/settings.json`:
+**On macOS host**, register the SSE server via CLI:
+
+```bash
+claude mcp add --transport sse --scope user tengu http://KALI_VM_IP:8000/sse
+```
+
+This writes to `~/.claude.json`. Verify with `claude mcp list`.
+
+**For Claude Desktop**, create a wrapper script and point the config at it.
+Claude Desktop uses a restricted `PATH` (`/usr/local/bin`, `/opt/homebrew/bin`,
+`/usr/bin`, `/bin`, `/usr/sbin`, `/sbin`) so tools managed by `fnm`, `nvm`, or
+`pyenv` are not found. The wrapper injects the correct `PATH` before running `mcp-remote`.
+
+**Step 1 — Create the wrapper script:**
+
+```bash
+cat > ~/.local/bin/tengu-mcp-bridge << 'EOF'
+#!/bin/bash
+# Inject the fnm node path so Claude Desktop can find node/npx
+export PATH="/Users/<you>/.local/share/fnm/node-versions/<version>/installation/bin:$PATH"
+exec npx -y mcp-remote http://KALI_VM_IP:8000/sse --allow-http
+EOF
+chmod +x ~/.local/bin/tengu-mcp-bridge
+```
+
+Find your Node.js stable path with:
+```bash
+readlink -f $(which npx)
+# example: /Users/you/.local/share/fnm/node-versions/v20.20.0/installation/lib/node_modules/npm/bin/npx-cli.js
+# → use the bin/ sibling directory: /Users/you/.local/share/fnm/node-versions/v20.20.0/installation/bin
+```
+
+> **Note:** `--allow-http` is required because `mcp-remote` blocks non-HTTPS URLs
+> that are not `localhost` by default.
+
+**Step 2 — Configure Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
-    "tengu-kali": {
-      "url": "http://192.168.56.101:8000/sse",
-      "transport": "sse"
+    "tengu": {
+      "command": "/Users/<you>/.local/bin/tengu-mcp-bridge",
+      "args": []
     }
   }
 }
 ```
+
+**Step 3 — Restart Claude Desktop.** The `tengu` server should appear as connected.
+
+**Verify the wrapper works** (simulates Claude Desktop's restricted PATH):
+```bash
+env -i PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin \
+  ~/.local/bin/tengu-mcp-bridge
+# expected: "Proxy established successfully between local STDIO and remote SSEClientTransport"
+```
+
+**UTM network setup** (macOS — recommended for Apple Silicon):
+1. UTM assigns the VM an IP automatically via its built-in NAT
+2. Find the VM IP inside Kali: `ip addr show` — look for the `192.168.x.x` address
+3. Use that IP in the commands above
+4. The Mac host can reach the VM directly (no port forwarding needed for NAT)
 
 **VirtualBox network setup** (host-only adapter):
 1. Go to VirtualBox → File → Host Network Manager
@@ -439,7 +515,7 @@ uv run tengu --transport sse --host 0.0.0.0 --port 8000
 **VMware Fusion network setup**:
 1. Use VMnet1 (Host-Only) or VMnet8 (NAT)
 2. Note the VM's IP from `ip addr show`
-3. Use that IP in the `url` field above
+3. Use that IP in the commands above
 
 ---
 
@@ -490,11 +566,19 @@ grep -A3 "\[rate_limiting\]" tengu.toml
 
 ### MCP server not appearing in Claude Code
 
-1. Verify `~/.claude/settings.json` is valid JSON: `python3 -m json.tool ~/.claude/settings.json`
-2. Verify the path in `--directory` exists: `ls /absolute/path/to/tengu`
-3. Test Tengu starts manually: `cd /path/to/tengu && uv run tengu`
-4. Check for errors: `TENGU_LOG_LEVEL=DEBUG uv run tengu`
-5. In Claude Code, run `/mcp` to see server status and error messages
+1. Confirm the server is registered: `claude mcp list`
+   - If empty, the server was not added to `~/.claude.json` — run `claude mcp add` (see above)
+   - Do **not** add `mcpServers` to `~/.claude/settings.json` — that key is ignored for MCP
+2. For SSE servers: verify the remote server is reachable:
+   ```bash
+   curl -I http://KALI_VM_IP:8000/sse   # should return HTTP 200 with text/event-stream
+   ```
+3. For stdio servers: verify the path in `--directory` exists: `ls /absolute/path/to/tengu`
+4. Test Tengu starts manually: `cd /path/to/tengu && uv run tengu`
+5. Check for errors: `TENGU_LOG_LEVEL=DEBUG uv run tengu`
+6. In Claude Code, run `/mcp` to see server status and error messages
+7. Open a new Claude Code session after adding the server — changes to `~/.claude.json`
+   are picked up on session start
 
 ### Metasploit RPC connection failures
 
