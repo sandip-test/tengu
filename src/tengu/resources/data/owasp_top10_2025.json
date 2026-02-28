@@ -1,0 +1,249 @@
+{
+  "version": "2025",
+  "title": "OWASP Top 10:2025",
+  "published": "2025",
+  "categories": [
+    {
+      "id": "A01",
+      "title": "Broken Access Control",
+      "description": "Access control enforces policy such that users cannot act outside of their intended permissions. Failures typically lead to unauthorized information disclosure, modification, or destruction of all data or performing a business function outside the user's limits.",
+      "attack_scenarios": [
+        "Accessing another user's account by modifying the URL",
+        "Elevation of privilege by acting as an admin without authentication",
+        "Metadata manipulation such as replaying JWT tokens with altered privileges",
+        "CORS misconfiguration allowing unauthorized API access",
+        "Force browsing to authenticated pages as unauthenticated user"
+      ],
+      "how_to_test": [
+        "Test every endpoint with different user roles",
+        "Check horizontal privilege escalation (user A accessing user B's data)",
+        "Check vertical privilege escalation (regular user accessing admin functions)",
+        "Test IDOR vulnerabilities in direct object references",
+        "Review CORS policies for overly permissive configurations",
+        "Test JWT token manipulation"
+      ],
+      "tools": ["ffuf", "burp_suite", "zap"],
+      "cwe_ids": [22, 23, 35, 59, 200, 201, 219, 264, 275, 276, 284, 285, 352, 359, 377, 402, 425, 441, 497, 538, 539, 540, 548, 552, 566, 601, 639, 651, 668, 706, 862, 863, 913, 922, 1275],
+      "remediation": "Deny by default. Enforce access control on the server side. Log access control failures and alert admins. Rate limit API and controller access. Invalidate JWT tokens on logout.",
+      "references": [
+        "https://owasp.org/Top10/A01_2021-Broken_Access_Control/",
+        "https://cwe.mitre.org/data/definitions/284.html"
+      ]
+    },
+    {
+      "id": "A02",
+      "title": "Cryptographic Failures",
+      "description": "Failures related to cryptography which often leads to sensitive data exposure. Data in transit and at rest must be protected with strong cryptographic controls.",
+      "attack_scenarios": [
+        "Sensitive data transmitted over unencrypted connections (HTTP)",
+        "Weak encryption algorithms (MD5, SHA1, DES)",
+        "Hard-coded cryptographic keys",
+        "Missing encryption for sensitive data at rest",
+        "Improper key management"
+      ],
+      "how_to_test": [
+        "Check if sensitive data is transmitted over HTTP instead of HTTPS",
+        "Test for weak SSL/TLS configurations using sslyze or testssl.sh",
+        "Search for hard-coded credentials and keys in source code",
+        "Check password storage mechanisms (bcrypt vs MD5)",
+        "Verify certificate validation is enforced"
+      ],
+      "tools": ["sslyze", "testssl", "nikto"],
+      "cwe_ids": [261, 296, 310, 319, 321, 322, 323, 324, 325, 326, 327, 328, 329, 330, 331, 335, 336, 337, 338, 340, 347, 523, 720, 757, 759, 760, 780, 818, 916],
+      "remediation": "Encrypt all data in transit with TLS 1.2+. Use strong hashing algorithms (bcrypt, scrypt, Argon2). Do not use deprecated crypto functions. Implement proper key management.",
+      "references": [
+        "https://owasp.org/Top10/A02_2021-Cryptographic_Failures/"
+      ]
+    },
+    {
+      "id": "A03",
+      "title": "Injection",
+      "description": "Injection flaws occur when untrusted data is sent to an interpreter as part of a command or query. Attacker's hostile data can trick the interpreter into executing unintended commands or accessing data without proper authorization.",
+      "attack_scenarios": [
+        "SQL injection via user input fields",
+        "OS command injection through file upload features",
+        "LDAP injection in authentication systems",
+        "XPath injection in XML-based systems",
+        "SSTI (Server-Side Template Injection)"
+      ],
+      "how_to_test": [
+        "Test all input fields for SQL injection using sqlmap",
+        "Test for XSS (reflected, stored, DOM) using dalfox",
+        "Test file upload endpoints for command injection",
+        "Check LDAP queries for injection possibilities",
+        "Test template rendering endpoints for SSTI"
+      ],
+      "tools": ["sqlmap", "dalfox", "burp_suite", "nuclei"],
+      "cwe_ids": [20, 74, 75, 77, 78, 79, 80, 83, 87, 88, 89, 90, 91, 93, 94, 95, 96, 97, 98, 99, 100, 113, 116, 138, 184, 470, 564, 610, 643, 644, 652, 917],
+      "remediation": "Use parameterized queries or prepared statements. Use ORM frameworks. Validate and sanitize all user inputs. Implement allowlists. Use LIMIT clauses in SQL queries.",
+      "references": [
+        "https://owasp.org/Top10/A03_2021-Injection/"
+      ]
+    },
+    {
+      "id": "A04",
+      "title": "Insecure Design",
+      "description": "Insecure design is a broad category representing different weaknesses expressed as 'missing or ineffective control design.' Focuses on risks related to design and architectural flaws.",
+      "attack_scenarios": [
+        "Missing rate limiting on credential recovery flows",
+        "Business logic flaws allowing price manipulation",
+        "Insecure direct object references by design"
+      ],
+      "how_to_test": [
+        "Review application architecture and data flow diagrams",
+        "Test business logic for abuse cases",
+        "Check for missing rate limiting on sensitive operations",
+        "Test multi-step workflows for state manipulation"
+      ],
+      "tools": ["burp_suite", "zap"],
+      "cwe_ids": [73, 183, 209, 213, 235, 256, 257, 266, 269, 280, 311, 312, 313, 316, 419, 430, 434, 444, 451, 472, 501, 522, 525, 539, 579, 598, 602, 642, 646, 650, 653, 656, 657, 799, 807, 840, 841, 927, 1021, 1173],
+      "remediation": "Establish a secure development lifecycle. Use threat modeling. Integrate security design patterns. Implement unit and integration tests for security controls.",
+      "references": [
+        "https://owasp.org/Top10/A04_2021-Insecure_Design/"
+      ]
+    },
+    {
+      "id": "A05",
+      "title": "Security Misconfiguration",
+      "description": "Security misconfiguration is the most commonly seen issue. Without a concerted, repeatable application security configuration process, systems are at higher risk.",
+      "attack_scenarios": [
+        "Default admin credentials left unchanged",
+        "Directory listing enabled on web server",
+        "Verbose error messages exposing stack traces",
+        "Unnecessary features enabled (ports, services, pages)",
+        "Missing security hardening across the stack"
+      ],
+      "how_to_test": [
+        "Check for default credentials on all services",
+        "Test for directory listing and path disclosure",
+        "Review HTTP security headers",
+        "Check for exposed admin interfaces",
+        "Scan for unnecessary open ports and services"
+      ],
+      "tools": ["nuclei", "nikto", "nmap", "ffuf"],
+      "cwe_ids": [2, 11, 13, 15, 16, 260, 315, 520, 526, 537, 541, 547, 611, 614, 756, 776, 942, 1004, 1032, 1174],
+      "remediation": "Implement a repeatable hardening process. Remove or disable unused features. Review and update configurations as part of patch management. Segment application architecture.",
+      "references": [
+        "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/"
+      ]
+    },
+    {
+      "id": "A06",
+      "title": "Vulnerable and Outdated Components",
+      "description": "Components such as libraries, frameworks, and other software modules run with the same privileges as the application. If a vulnerable component is exploited, such an attack can facilitate data loss or server takeover.",
+      "attack_scenarios": [
+        "Exploiting known CVEs in outdated web frameworks",
+        "Using publicly available exploits for unpatched components",
+        "Vulnerable JavaScript libraries in frontend applications"
+      ],
+      "how_to_test": [
+        "Scan for known CVEs using nuclei CVE templates",
+        "Check component versions and compare against NVD/CVE databases",
+        "Use dependency scanning tools (npm audit, pip audit)",
+        "Review server software versions via HTTP headers"
+      ],
+      "tools": ["nuclei", "nmap", "nikto"],
+      "cwe_ids": [1104],
+      "remediation": "Continuously inventory component versions. Monitor CVE databases. Subscribe to security advisories. Implement automated dependency updates. Only use components from official sources.",
+      "references": [
+        "https://owasp.org/Top10/A06_2021-Vulnerable_and_Outdated_Components/"
+      ]
+    },
+    {
+      "id": "A07",
+      "title": "Identification and Authentication Failures",
+      "description": "Confirmation of the user's identity, authentication, and session management is critical to protect against authentication-related attacks.",
+      "attack_scenarios": [
+        "Credential stuffing attacks using breached credentials",
+        "Brute force attacks without lockout mechanisms",
+        "Weak or default passwords",
+        "Insecure session token implementation",
+        "Missing MFA on sensitive actions"
+      ],
+      "how_to_test": [
+        "Test for account lockout mechanisms",
+        "Check password complexity requirements",
+        "Test session fixation and session hijacking",
+        "Verify secure session cookie flags (HttpOnly, Secure, SameSite)",
+        "Test password reset flows for weaknesses"
+      ],
+      "tools": ["hydra", "burp_suite", "ffuf"],
+      "cwe_ids": [255, 259, 287, 288, 290, 294, 295, 297, 300, 302, 304, 306, 307, 346, 384, 521, 613, 620, 640, 798, 940, 1216],
+      "remediation": "Implement MFA. Do not deploy with default credentials. Use bcrypt for passwords. Implement weak password checks. Use secure session management. Limit failed login attempts.",
+      "references": [
+        "https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/"
+      ]
+    },
+    {
+      "id": "A08",
+      "title": "Software and Data Integrity Failures",
+      "description": "Software and data integrity failures relate to code and infrastructure that does not protect against integrity violations. An example is where an application relies upon plugins, libraries, or modules from untrusted sources, repositories, and content delivery networks.",
+      "attack_scenarios": [
+        "SolarWinds-style supply chain attack",
+        "Insecure deserialization leading to RCE",
+        "Auto-update without integrity verification",
+        "Using CDN resources without Subresource Integrity (SRI)"
+      ],
+      "how_to_test": [
+        "Check CI/CD pipelines for unauthorized access",
+        "Test deserialization endpoints for gadget chains",
+        "Verify SRI hashes on CDN-hosted resources",
+        "Review auto-update mechanisms for integrity checks"
+      ],
+      "tools": ["burp_suite", "nuclei"],
+      "cwe_ids": [345, 353, 426, 494, 502, 565, 784, 829, 830, 915, 916, 924, 1104],
+      "remediation": "Use digital signatures for code. Only consume libraries from trusted repos with verified hashes. Ensure CI/CD pipelines have integrity controls. Implement deserialization protection.",
+      "references": [
+        "https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/"
+      ]
+    },
+    {
+      "id": "A09",
+      "title": "Security Logging and Monitoring Failures",
+      "description": "This category helps detect, escalate, and respond to active breaches. Without logging and monitoring, breaches cannot be detected. Insufficient logging and monitoring allows attackers to achieve their goals without detection.",
+      "attack_scenarios": [
+        "Audit trails missing for login failures",
+        "Logs not monitored for suspicious patterns",
+        "Logs stored locally and cleared by attacker",
+        "Missing alerting for high-value transactions"
+      ],
+      "how_to_test": [
+        "Verify that login failures generate log entries",
+        "Test that high-value transactions are logged",
+        "Check if logs include sufficient detail for forensic reconstruction",
+        "Verify logs are protected from tampering",
+        "Test penetration activities and verify they appear in logs"
+      ],
+      "tools": [],
+      "cwe_ids": [117, 223, 532, 778],
+      "remediation": "Ensure all authentication, access control, and server-side input validation failures are logged with sufficient context. Ensure logs are in a format easily consumed by SIEM. Establish incident response and recovery plans.",
+      "references": [
+        "https://owasp.org/Top10/A09_2021-Security_Logging_and_Monitoring_Failures/"
+      ]
+    },
+    {
+      "id": "A10",
+      "title": "Server-Side Request Forgery (SSRF)",
+      "description": "SSRF flaws occur whenever a web application is fetching a remote resource without validating the user-supplied URL. Allows an attacker to coerce the application to send a crafted request to an unexpected destination.",
+      "attack_scenarios": [
+        "Accessing cloud metadata endpoints (169.254.169.254)",
+        "Port scanning internal networks via SSRF",
+        "Accessing internal services not exposed to internet",
+        "Exfiltrating data via DNS-based SSRF"
+      ],
+      "how_to_test": [
+        "Find URL/endpoint parameters and test with internal addresses",
+        "Test with cloud metadata endpoints (AWS, GCP, Azure)",
+        "Use OAST (out-of-band) techniques to detect blind SSRF",
+        "Test protocol smuggling (file://, dict://, gopher://)",
+        "Check redirect handling for open redirects leading to SSRF"
+      ],
+      "tools": ["burp_suite", "nuclei", "ffuf"],
+      "cwe_ids": [918],
+      "remediation": "Sanitize and validate all client-supplied input data. Enforce URL schema, port, and destination with an allowlist. Do not send raw responses to clients. Disable HTTP redirections. Use network segmentation.",
+      "references": [
+        "https://owasp.org/Top10/A10_2021-Server-Side_Request_Forgery_%28SSRF%29/"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,286 @@
+{
+  "title": "Stealth & OPSEC Techniques for Penetration Testing",
+  "version": "1.0",
+  "description": "Comprehensive reference for stealth techniques and operational security (OPSEC) practices during authorized penetration tests.",
+  "categories": {
+    "anonymization": {
+      "name": "Traffic Anonymization",
+      "techniques": [
+        {
+          "id": "anon-001",
+          "name": "Tor Network Routing",
+          "description": "Route all traffic through the Tor onion network to anonymize source IP. Provides multi-hop encryption and IP obfuscation.",
+          "tools": ["tor", "torsocks", "proxychains"],
+          "tengu_config": "stealth.proxy.enabled = true; stealth.proxy.type = 'socks5'; stealth.proxy.port = 9050",
+          "detection_risk": "medium",
+          "notes": "Exit node IP may be on public Tor exit lists. Use bridges for higher stealth.",
+          "references": ["https://www.torproject.org/", "RFC 5817"]
+        },
+        {
+          "id": "anon-002",
+          "name": "Proxychains",
+          "description": "Force any application to use SOCKS/HTTP proxies by intercepting connect syscalls. Supports chaining multiple proxies.",
+          "tools": ["proxychains4", "proxychains-ng"],
+          "tengu_config": "stealth.wrapper.mode = 'proxychains'",
+          "detection_risk": "low",
+          "notes": "Use 'dynamic_chain' mode in proxychains.conf for resilience to dead proxies.",
+          "setup": "sudo apt install proxychains4 && edit /etc/proxychains4.conf"
+        },
+        {
+          "id": "anon-003",
+          "name": "Torsocks Wrapper",
+          "description": "Library-level Tor wrapper that intercepts network calls from any application and routes them via Tor.",
+          "tools": ["torsocks"],
+          "tengu_config": "stealth.wrapper.mode = 'torsocks'",
+          "detection_risk": "low",
+          "notes": "More reliable than proxychains for some tools. Blocks UDP (use TCP-mode scanning)."
+        },
+        {
+          "id": "anon-004",
+          "name": "VPN over Tor",
+          "description": "Connect VPN through Tor for double anonymization. Hides Tor usage from ISP and hides VPN usage from exit node.",
+          "detection_risk": "very-low",
+          "notes": "Significant latency impact. Ensure VPN provider does not log."
+        }
+      ]
+    },
+    "timing_evasion": {
+      "name": "Timing & Rate Evasion",
+      "techniques": [
+        {
+          "id": "timing-001",
+          "name": "Request Timing Jitter",
+          "description": "Add randomized delays between requests to mimic human browsing patterns and evade rate-based detection.",
+          "tengu_config": "stealth.timing.enabled = true; stealth.timing.min_delay_ms = 500; stealth.timing.max_delay_ms = 5000",
+          "detection_risk": "low",
+          "notes": "IDS/IPS typically alert on uniform timing. Jitter breaks statistical signatures."
+        },
+        {
+          "id": "timing-002",
+          "name": "Nmap Slow Timing Templates",
+          "description": "Use nmap timing templates T0 (paranoid) to T2 (polite) to minimize detection by IDS/IPS.",
+          "tools": ["nmap"],
+          "nmap_flags": ["-T0", "-T1", "-T2"],
+          "detection_risk": "low",
+          "notes": "T0 sends one packet every 5 minutes. T1 is 15 seconds between packets. Very slow but nearly undetectable."
+        },
+        {
+          "id": "timing-003",
+          "name": "Distributed Scanning",
+          "description": "Distribute scan traffic across multiple source IPs or time windows to avoid triggering thresholds.",
+          "detection_risk": "low"
+        },
+        {
+          "id": "timing-004",
+          "name": "Business Hours Blending",
+          "description": "Conduct scans during target organization's business hours to blend with legitimate traffic patterns.",
+          "detection_risk": "very-low",
+          "notes": "Traffic during off-hours is more likely to be flagged by anomaly-based detection."
+        }
+      ]
+    },
+    "dns_privacy": {
+      "name": "DNS Privacy",
+      "techniques": [
+        {
+          "id": "dns-001",
+          "name": "DNS-over-HTTPS (DoH)",
+          "description": "Encrypt DNS queries inside HTTPS to prevent ISP/network monitoring of hostname lookups.",
+          "providers": [
+            {"name": "Cloudflare", "url": "https://cloudflare-dns.com/dns-query"},
+            {"name": "Google", "url": "https://dns.google/dns-query"},
+            {"name": "Quad9", "url": "https://dns.quad9.net/dns-query"},
+            {"name": "NextDNS", "url": "https://dns.nextdns.io/dns-query"}
+          ],
+          "tengu_config": "stealth.dns.enabled = true; stealth.dns.method = 'doh'; stealth.dns.doh_url = 'https://cloudflare-dns.com/dns-query'",
+          "rfc": "RFC 8484",
+          "detection_risk": "very-low"
+        },
+        {
+          "id": "dns-002",
+          "name": "DNS-over-Tor",
+          "description": "Route DNS queries through the Tor network for maximum privacy. Prevents correlation between DNS queries and browsing.",
+          "tengu_config": "stealth.dns.method = 'tor'",
+          "detection_risk": "very-low",
+          "notes": "Requires Tor SOCKS proxy to be active. Higher latency than DoH."
+        },
+        {
+          "id": "dns-003",
+          "name": "DNS Leak Prevention",
+          "description": "Ensure all DNS queries are routed through the anonymization layer, preventing system resolver from revealing true DNS servers.",
+          "notes": "Test with check_anonymity() to detect leaks. Common issue with split-tunnel VPN configs."
+        }
+      ]
+    },
+    "user_agent_rotation": {
+      "name": "User-Agent Rotation",
+      "techniques": [
+        {
+          "id": "ua-001",
+          "name": "Browser UA Rotation",
+          "description": "Rotate User-Agent strings across requests to impersonate different browsers and avoid fingerprinting.",
+          "tengu_config": "stealth.user_agent.enabled = true; stealth.user_agent.browser_type = 'random'; stealth.user_agent.rotate_every = 10",
+          "detection_risk": "low",
+          "notes": "Combine with matching Accept, Accept-Language headers for better realism."
+        },
+        {
+          "id": "ua-002",
+          "name": "TLS Fingerprint Randomization",
+          "description": "Vary TLS ClientHello parameters to evade JA3/JA3S fingerprinting used by advanced WAFs and IDS.",
+          "detection_risk": "low",
+          "tools": ["curl-impersonate", "httpx with custom TLS settings"],
+          "notes": "JA3 fingerprints are tied to TLS library, not just UA string."
+        }
+      ]
+    },
+    "tool_evasion": {
+      "name": "Tool-Level Evasion",
+      "techniques": [
+        {
+          "id": "tool-001",
+          "name": "Nmap Decoy Scanning",
+          "description": "Generate spoofed scan packets from multiple decoy IPs to obscure the true scanner source.",
+          "tools": ["nmap"],
+          "nmap_flags": ["-D RND:10", "-D decoy1,decoy2,ME"],
+          "detection_risk": "medium",
+          "notes": "Requires raw socket privileges. Does not work with connect scan (-sT)."
+        },
+        {
+          "id": "tool-002",
+          "name": "Nmap Fragmentation",
+          "description": "Fragment TCP packets to evade packet inspection by IDS/IPS that do not reassemble fragments.",
+          "tools": ["nmap"],
+          "nmap_flags": ["-f", "-ff", "--mtu 24"],
+          "detection_risk": "low-medium"
+        },
+        {
+          "id": "tool-003",
+          "name": "Nmap Source Port Spoofing",
+          "description": "Use a common source port (80, 443, 53) to evade firewall rules that permit outbound traffic on these ports.",
+          "tools": ["nmap"],
+          "nmap_flags": ["--source-port 53", "-g 443"],
+          "detection_risk": "low"
+        },
+        {
+          "id": "tool-004",
+          "name": "Nuclei Passive Templates",
+          "description": "Run only passive nuclei templates first to gather info without triggering active probes.",
+          "tools": ["nuclei"],
+          "nuclei_flags": ["-pt passive", "-tags passive"],
+          "detection_risk": "very-low"
+        },
+        {
+          "id": "tool-005",
+          "name": "Randomized HTTP Headers",
+          "description": "Add realistic Accept, Accept-Language, Accept-Encoding headers to make requests appear as legitimate browser traffic.",
+          "detection_risk": "very-low"
+        }
+      ]
+    },
+    "opsec_practices": {
+      "name": "OPSEC Best Practices",
+      "practices": [
+        {
+          "id": "opsec-001",
+          "name": "Compartmentalization",
+          "description": "Use dedicated VMs or containers for pentesting activity. Never mix personal and professional activity on the same session.",
+          "priority": "critical"
+        },
+        {
+          "id": "opsec-002",
+          "name": "Minimal Footprint",
+          "description": "Only run the tools necessary for the current phase. Avoid running multiple aggressive scans simultaneously.",
+          "priority": "high"
+        },
+        {
+          "id": "opsec-003",
+          "name": "Log Review",
+          "description": "Review your own tool logs to understand what evidence you leave behind. Know what your tools write to disk.",
+          "priority": "high"
+        },
+        {
+          "id": "opsec-004",
+          "name": "Exit Node Country Selection",
+          "description": "Prefer Tor exit nodes or VPNs in jurisdictions favorable to the engagement. Avoid exit nodes in target country.",
+          "priority": "medium"
+        },
+        {
+          "id": "opsec-005",
+          "name": "Identity Rotation Between Phases",
+          "description": "Request new Tor circuit and rotate UA between major engagement phases to prevent traffic correlation.",
+          "priority": "medium",
+          "tengu_tool": "rotate_identity()"
+        },
+        {
+          "id": "opsec-006",
+          "name": "Pre-Engagement Anonymity Verification",
+          "description": "Always verify anonymity level before starting active scanning. Use check_anonymity() and tor_check().",
+          "priority": "critical",
+          "tengu_tool": "check_anonymity(), tor_check()"
+        },
+        {
+          "id": "opsec-007",
+          "name": "Audit Log Hygiene",
+          "description": "Ensure audit logs are stored securely and contain only engagement-relevant data. Review log path permissions.",
+          "priority": "high"
+        },
+        {
+          "id": "opsec-008",
+          "name": "Written Authorization",
+          "description": "Always obtain written authorization before any active scanning. Keep authorization documents accessible during the engagement.",
+          "priority": "critical"
+        }
+      ]
+    },
+    "detection_evasion": {
+      "name": "IDS/IPS Detection Evasion",
+      "techniques": [
+        {
+          "id": "evasion-001",
+          "name": "Payload Encoding",
+          "description": "Encode injection payloads (URL, HTML, Unicode, Base64) to bypass signature-based WAF/IDS detection.",
+          "detection_risk": "low-medium"
+        },
+        {
+          "id": "evasion-002",
+          "name": "Case Variation",
+          "description": "Vary case in keywords (SELECT vs SeLeCt) to bypass case-sensitive signature detection in WAFs.",
+          "detection_risk": "low"
+        },
+        {
+          "id": "evasion-003",
+          "name": "Comment Insertion",
+          "description": "Insert SQL/HTML comments mid-keyword (SEL/**/ECT) to break signature patterns.",
+          "detection_risk": "low"
+        },
+        {
+          "id": "evasion-004",
+          "name": "Connection Throttling",
+          "description": "Limit concurrent connections and request rate to stay below IDS thresholds.",
+          "detection_risk": "very-low"
+        },
+        {
+          "id": "evasion-005",
+          "name": "Randomized Parameter Ordering",
+          "description": "Vary the order of HTTP parameters and headers across requests to avoid statistical detection.",
+          "detection_risk": "very-low"
+        }
+      ]
+    }
+  },
+  "quick_reference": {
+    "anonymity_levels": {
+      "none": "Direct connection — real IP fully exposed",
+      "low": "Basic proxy — some obfuscation but detectable",
+      "medium": "VPN or single proxy — IP hidden but metadata may leak",
+      "high": "Tor + DoH — strong anonymity, minimal metadata leakage"
+    },
+    "tengu_stealth_commands": [
+      "check_anonymity() — verify current anonymity level",
+      "tor_check() — confirm Tor exit node",
+      "proxy_check(proxy_url) — validate proxy reachability",
+      "rotate_identity() — new Tor circuit + new UA",
+      "tor_new_identity(control_port, control_password) — NEWNYM signal"
+    ]
+  }
+}

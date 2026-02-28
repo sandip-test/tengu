@@ -1,0 +1,219 @@
+{
+  "checklists": {
+    "web-application": {
+      "title": "Web Application Penetration Test Checklist",
+      "methodology": "OWASP Testing Guide v4.2 + PTES",
+      "sections": [
+        {
+          "name": "Information Gathering",
+          "items": [
+            "Fingerprint web server (Server header, error pages, default files)",
+            "Enumerate application entry points (all URLs, forms, APIs)",
+            "Identify technologies (CMS, frameworks, libraries, versions)",
+            "Map authentication mechanisms (login, OAuth, SSO, MFA)",
+            "Identify all user roles and privilege levels",
+            "Discover hidden files and directories (ffuf, gobuster)",
+            "Review robots.txt, sitemap.xml, security.txt",
+            "Check for exposed .git, .svn, .env files",
+            "Search for backup files (.bak, .old, .zip, .tar.gz)",
+            "Review JavaScript source for secrets and endpoints"
+          ]
+        },
+        {
+          "name": "Authentication Testing",
+          "items": [
+            "Test for default credentials",
+            "Test account lockout policy (brute force protection)",
+            "Test password complexity requirements",
+            "Test password reset flow for weaknesses",
+            "Test 'Remember Me' functionality",
+            "Test session fixation",
+            "Test concurrent session handling",
+            "Test authentication bypass (direct URL access, parameter tampering)",
+            "Test OAuth/SSO implementation for common flaws",
+            "Verify MFA implementation and bypass possibilities"
+          ]
+        },
+        {
+          "name": "Session Management",
+          "items": [
+            "Inspect session token entropy and randomness",
+            "Verify HttpOnly flag on session cookies",
+            "Verify Secure flag on session cookies",
+            "Verify SameSite attribute (Lax or Strict)",
+            "Test session expiration (idle + absolute timeout)",
+            "Test logout functionality (server-side session invalidation)",
+            "Test for CSRF in state-changing operations",
+            "Check cookie scope (Domain and Path attributes)",
+            "Test for session token in URL parameters"
+          ]
+        },
+        {
+          "name": "Access Control",
+          "items": [
+            "Test horizontal privilege escalation (user A accessing user B's data)",
+            "Test vertical privilege escalation (regular user → admin functions)",
+            "Test for IDOR in all direct object references",
+            "Test forced browsing to restricted pages",
+            "Verify server-side access control enforcement (not just client-side)",
+            "Test API endpoints with different roles",
+            "Test parameter tampering (user_id, account_id, role)",
+            "Test directory traversal",
+            "Verify function-level access control"
+          ]
+        },
+        {
+          "name": "Input Validation & Injection",
+          "items": [
+            "Test all input fields for SQL injection (manual + sqlmap)",
+            "Test for stored, reflected, and DOM XSS",
+            "Test for SSTI (Server-Side Template Injection)",
+            "Test file upload for unrestricted file upload",
+            "Test for SSRF in URL/callback parameters",
+            "Test for XML injection and XXE",
+            "Test for LDAP injection in authentication",
+            "Test for HTTP header injection (Host, X-Forwarded-For)",
+            "Test for open redirect vulnerabilities",
+            "Test for command injection in OS-facing features"
+          ]
+        },
+        {
+          "name": "Cryptography",
+          "items": [
+            "Verify HTTPS on all pages (especially login/checkout)",
+            "Test SSL/TLS configuration (sslyze)",
+            "Check for mixed content (HTTP resources on HTTPS pages)",
+            "Verify secure cookie transmission",
+            "Check password storage mechanism (bcrypt preferred)",
+            "Test for sensitive data in HTTP responses/logs",
+            "Verify JWT implementation (algorithm confusion, weak secrets)"
+          ]
+        },
+        {
+          "name": "Business Logic",
+          "items": [
+            "Test price/quantity manipulation in e-commerce flows",
+            "Test workflow bypass (skip steps in multi-step processes)",
+            "Test for negative values, zero values, very large values",
+            "Test race conditions in sensitive operations",
+            "Test mass assignment vulnerabilities",
+            "Test feature flag bypass",
+            "Test email/domain validation bypass"
+          ]
+        },
+        {
+          "name": "Error Handling & Information Disclosure",
+          "items": [
+            "Force errors and review messages for stack traces",
+            "Check HTTP response headers for version information",
+            "Review error pages for technology disclosure",
+            "Test for verbose error messages in API responses",
+            "Check for sensitive data in HTTP logs and referrers",
+            "Review HTML source comments for sensitive information"
+          ]
+        }
+      ]
+    },
+    "api": {
+      "title": "API Penetration Test Checklist",
+      "methodology": "OWASP API Security Top 10:2023",
+      "sections": [
+        {
+          "name": "API Discovery",
+          "items": [
+            "Map all API endpoints (Swagger/OpenAPI docs, JS files, traffic analysis)",
+            "Identify API version(s) in use",
+            "Enumerate HTTP methods supported by each endpoint",
+            "Identify authentication mechanisms (API keys, JWT, OAuth2)",
+            "Find deprecated API versions still accessible"
+          ]
+        },
+        {
+          "name": "Authentication & Authorization",
+          "items": [
+            "Test API key strength and entropy",
+            "Test JWT implementation (none algorithm, RS256→HS256 confusion, weak secrets)",
+            "Test OAuth2 flows for common vulnerabilities",
+            "Test BOLA/IDOR on all resource endpoints",
+            "Test function-level authorization (user performing admin operations)",
+            "Test for missing authentication on sensitive endpoints",
+            "Test API key rotation and revocation"
+          ]
+        },
+        {
+          "name": "Rate Limiting & Resource Management",
+          "items": [
+            "Test for missing rate limiting (BFLA)",
+            "Test for resource exhaustion (pagination without limits)",
+            "Test for unrestricted data exposure in responses",
+            "Test for mass assignment in POST/PUT/PATCH endpoints",
+            "Test GraphQL introspection and query depth limits"
+          ]
+        },
+        {
+          "name": "Input Validation",
+          "items": [
+            "Test all parameters for injection vulnerabilities",
+            "Test content type validation (JSON, XML, multipart)",
+            "Test parameter pollution (duplicate params)",
+            "Test for NoSQL injection (MongoDB, etc.)",
+            "Test for GraphQL injection",
+            "Test file upload endpoints"
+          ]
+        }
+      ]
+    },
+    "network": {
+      "title": "Network Infrastructure Penetration Test Checklist",
+      "methodology": "PTES + NIST SP 800-115",
+      "sections": [
+        {
+          "name": "Discovery",
+          "items": [
+            "Port scan all in-scope IPs (TCP + UDP common ports)",
+            "Identify all live hosts (ping sweep, ARP scan)",
+            "Enumerate services and versions on open ports",
+            "Identify operating systems via fingerprinting",
+            "Map network topology and segments"
+          ]
+        },
+        {
+          "name": "Service Enumeration",
+          "items": [
+            "Enumerate SMB shares and permissions",
+            "Test RDP for weak configurations and NLA enforcement",
+            "Enumerate SNMP community strings",
+            "Test SSH for weak algorithms and version vulnerabilities",
+            "Enumerate FTP/SFTP for anonymous access",
+            "Test SMTP for open relay",
+            "Enumerate DNS for zone transfers",
+            "Test VPN endpoints and configurations"
+          ]
+        },
+        {
+          "name": "Vulnerability Assessment",
+          "items": [
+            "Run vulnerability scanner against all in-scope hosts",
+            "Check for EternalBlue/MS17-010 (SMB)",
+            "Check for BlueKeep/CVE-2019-0708 (RDP)",
+            "Check for Log4Shell/CVE-2021-44228",
+            "Check for known unpatched CVEs on identified software",
+            "Test for default credentials on all services",
+            "Check network device configurations (routers, firewalls, switches)"
+          ]
+        },
+        {
+          "name": "Exploitation & Post-Exploitation",
+          "items": [
+            "Exploit confirmed vulnerabilities with authorization",
+            "Test for credential reuse across systems",
+            "Test lateral movement possibilities",
+            "Test privilege escalation on compromised hosts",
+            "Assess network segmentation effectiveness",
+            "Test for sensitive data exposure on file shares"
+          ]
+        }
+      ]
+    }
+  }
+}

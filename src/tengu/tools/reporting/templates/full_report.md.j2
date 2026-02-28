@@ -1,0 +1,235 @@
+---
+title: "Penetration Test Report"
+client: "{{ report.client_name }}"
+classification: "CONFIDENTIAL"
+date: "{{ report.generated_at.strftime('%Y-%m-%d') }}"
+---
+
+# PENETRATION TEST REPORT
+
+**Classification:** CONFIDENTIAL
+**Client:** {{ report.client_name }}
+**Engagement Type:** {{ report.engagement_type | title }}
+**Testing Period:** {{ report.engagement_dates }}
+**Methodology:** {{ report.methodology }}
+**Report Generated:** {{ report.generated_at.strftime('%Y-%m-%d %H:%M UTC') }}
+
+---
+
+## TABLE OF CONTENTS
+
+1. [Executive Summary](#executive-summary)
+2. [Scope and Rules of Engagement](#scope)
+3. [Methodology](#methodology)
+4. [Findings Summary](#findings-summary)
+5. [Detailed Findings](#detailed-findings)
+6. [Remediation Roadmap](#remediation-roadmap)
+7. [Conclusion](#conclusion)
+8. [Appendices](#appendices)
+
+---
+
+## 1. EXECUTIVE SUMMARY {#executive-summary}
+
+**Overall Security Posture Score:** {{ report.overall_risk_score | round(1) }} / 10.0
+**Risk Rating:** {{ risk_rating }}
+
+{{ report.executive_summary or "Executive summary not provided." }}
+
+### Finding Distribution
+
+| Severity | Count |
+|----------|-------|
+| Critical | {{ risk_matrix.critical_count }} |
+| High | {{ risk_matrix.high_count }} |
+| Medium | {{ risk_matrix.medium_count }} |
+| Low | {{ risk_matrix.low_count }} |
+| Informational | {{ risk_matrix.info_count }} |
+| **Total** | **{{ risk_matrix.total }}** |
+
+### Top Findings Requiring Immediate Attention
+
+{% for finding in report.findings | selectattr('severity', 'in', ['critical', 'high']) | sort(attribute='cvss_score', reverse=True) | list %}{% if loop.index <= 5 %}
+- **{{ finding.id }}** — {{ finding.title }} ({{ finding.severity | upper }}, CVSS: {{ finding.cvss_score }})
+{% endif %}{% endfor %}
+
+---
+
+## 2. SCOPE AND RULES OF ENGAGEMENT {#scope}
+
+### In-Scope Targets
+
+{% for target in report.scope %}
+- `{{ target }}`
+{% endfor %}
+
+### Exclusions
+
+{% if report.exclusions %}{% for exclusion in report.exclusions %}
+- `{{ exclusion }}`
+{% endfor %}{% else %}
+No explicit exclusions defined.
+{% endif %}
+
+### Engagement Type
+
+**{{ report.engagement_type | title }}**: {% if report.engagement_type == 'blackbox' %}No prior knowledge of the target environment was provided to the testing team.{% elif report.engagement_type == 'greybox' %}Limited information (e.g., network diagrams, application documentation) was provided.{% else %}Full access to source code, architecture documentation, and internal systems was provided.{% endif %}
+
+---
+
+## 3. METHODOLOGY {#methodology}
+
+This engagement followed the **{{ report.methodology }}** (Penetration Testing Execution Standard) methodology, covering the following phases:
+
+1. **Pre-Engagement Interactions** — Scope definition and rules of engagement
+2. **Intelligence Gathering** — Passive and active reconnaissance
+3. **Threat Modeling** — Attack surface analysis and scenario development
+4. **Vulnerability Analysis** — Automated scanning and manual testing
+5. **Exploitation** — Confirmation of exploitability with authorized proof-of-concept
+6. **Post-Exploitation** — Impact assessment and lateral movement analysis
+7. **Reporting** — Documentation of findings with remediation guidance
+
+### Tools Used
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+{% for tool in report.tools_used %}| {{ tool.name }} | {{ tool.version or 'N/A' }} | {{ tool.category if tool.category is defined else 'Security Testing' }} |
+{% endfor %}
+
+---
+
+## 4. FINDINGS SUMMARY {#findings-summary}
+
+| ID | Title | Severity | CVSS | OWASP | Asset | Status |
+|----|-------|----------|------|-------|-------|--------|
+{% for finding in report.findings | sort(attribute='cvss_score', reverse=True) %}| {{ finding.id }} | {{ finding.title }} | {{ finding.severity | upper }} | {{ finding.cvss_score }} | {{ finding.owasp_category or 'N/A' }} | {{ finding.affected_asset[:40] }}{% if finding.affected_asset | length > 40 %}...{% endif %} | {{ finding.status | title }} |
+{% endfor %}
+
+---
+
+## 5. DETAILED FINDINGS {#detailed-findings}
+
+{% for finding in report.findings | sort(attribute='cvss_score', reverse=True) %}
+---
+
+### {{ finding.id }}: {{ finding.title }}
+
+| Attribute | Value |
+|-----------|-------|
+| **Severity** | {{ finding.severity | upper }} |
+| **CVSS Score** | {{ finding.cvss_score }} |
+| **CVSS Vector** | `{{ finding.cvss_vector or 'N/A' }}` |
+| **CWE** | {% if finding.cwe_id %}CWE-{{ finding.cwe_id }}: {{ finding.cwe_name or '' }}{% else %}N/A{% endif %} |
+| **OWASP Category** | {{ finding.owasp_category or 'N/A' }} |
+| **Affected Asset** | `{{ finding.affected_asset }}` |
+| **Detection Tool** | {{ finding.tool }} |
+| **Status** | {{ finding.status | title }} |
+| **Date Found** | {{ finding.timestamp.strftime('%Y-%m-%d') }} |
+
+{% if finding.cve_ids %}
+**Related CVEs:** {% for cve in finding.cve_ids %}`{{ cve }}`{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+
+#### Description
+
+{{ finding.description }}
+
+#### Impact
+
+{{ finding.impact or "Impact analysis not provided." }}
+
+#### Steps to Reproduce
+
+{% for step in finding.steps_to_reproduce %}
+{{ loop.index }}. {{ step }}
+{% endfor %}
+
+{% if finding.evidence %}
+#### Evidence
+
+{% for ev in finding.evidence %}
+**{{ ev.title }}**
+
+```
+{{ ev.content[:2000] }}
+```
+
+{% endfor %}
+{% endif %}
+
+#### Remediation
+
+**Quick Fix:** {{ finding.remediation_short or "See long-term remediation." }}
+
+**Long-term Solution:**
+{{ finding.remediation_long or "Implement proper security controls as recommended by OWASP and the referenced standards." }}
+
+{% if finding.references %}
+#### References
+
+{% for ref in finding.references %}
+- {{ ref }}
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+
+---
+
+## 6. REMEDIATION ROADMAP {#remediation-roadmap}
+
+### Immediate Action (0-30 Days)
+
+*Address all Critical and High severity findings.*
+
+{% for finding in report.findings | selectattr('severity', 'in', ['critical', 'high']) | sort(attribute='cvss_score', reverse=True) %}
+- **{{ finding.id }}** — {{ finding.title }}: {{ finding.remediation_short or 'See detailed findings.' }}
+{% endfor %}
+
+### Short-Term (30-90 Days)
+
+*Address all Medium severity findings.*
+
+{% for finding in report.findings | selectattr('severity', 'equalto', 'medium') %}
+- **{{ finding.id }}** — {{ finding.title }}
+{% endfor %}
+
+### Medium-Term (90-180 Days)
+
+*Address Low severity findings and implement security improvements.*
+
+{% for finding in report.findings | selectattr('severity', 'in', ['low', 'info']) %}
+- **{{ finding.id }}** — {{ finding.title }}
+{% endfor %}
+
+---
+
+## 7. CONCLUSION {#conclusion}
+
+{{ report.conclusion or "Conclusion not provided." }}
+
+---
+
+## 8. APPENDICES {#appendices}
+
+### Appendix A: Glossary
+
+| Term | Definition |
+|------|-----------|
+| CVSS | Common Vulnerability Scoring System — standardized score for vulnerability severity |
+| CWE | Common Weakness Enumeration — catalog of software security weakness types |
+| CVE | Common Vulnerabilities and Exposures — public vulnerability identifiers |
+| OWASP | Open Web Application Security Project |
+| PTES | Penetration Testing Execution Standard |
+| PoC | Proof of Concept — demonstration of vulnerability exploitability |
+| RCE | Remote Code Execution |
+| SSRF | Server-Side Request Forgery |
+| XSS | Cross-Site Scripting |
+| SQLi | SQL Injection |
+| IDOR | Insecure Direct Object Reference |
+
+---
+
+*This report is CONFIDENTIAL and intended solely for {{ report.client_name }}.*
+*Unauthorized disclosure is prohibited.*
+*Generated by Tengu MCP Security Testing Platform.*

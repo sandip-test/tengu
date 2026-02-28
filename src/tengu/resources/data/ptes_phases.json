@@ -1,0 +1,178 @@
+{
+  "methodology": "PTES",
+  "full_name": "Penetration Testing Execution Standard",
+  "version": "1.1",
+  "url": "http://www.pentest-standard.org/",
+  "phases": [
+    {
+      "number": 1,
+      "name": "Pre-Engagement Interactions",
+      "description": "Defines the scope, objectives, and rules of engagement for the penetration test. Establishes legal boundaries and communication channels.",
+      "objectives": [
+        "Define scope of work and authorized targets",
+        "Establish rules of engagement (RoE)",
+        "Define communication channels and escalation procedures",
+        "Establish legal authorization (signed contracts/NDA)",
+        "Agree on timelines and reporting requirements",
+        "Define engagement type (blackbox/greybox/whitebox)"
+      ],
+      "activities": [
+        "Scope definition meeting with client",
+        "Rules of engagement documentation",
+        "Threat modeling and intelligence gathering goals",
+        "Legal paperwork review (authorization letters, NDAs)",
+        "Emergency contacts and abort conditions"
+      ],
+      "deliverables": [
+        "Signed Statement of Work (SoW)",
+        "Rules of Engagement document",
+        "Scope definition document"
+      ],
+      "tools": []
+    },
+    {
+      "number": 2,
+      "name": "Intelligence Gathering",
+      "description": "Comprehensive information gathering about the target organization using both passive and active reconnaissance techniques.",
+      "objectives": [
+        "Map the target's digital footprint",
+        "Identify external-facing assets and technologies",
+        "Gather employee information for social engineering",
+        "Identify potential entry points"
+      ],
+      "activities": [
+        "OSINT: social media, job postings, public records",
+        "DNS enumeration and zone transfers",
+        "Subdomain discovery",
+        "WHOIS and IP range lookups",
+        "Search engine dorking (Google, Shodan, Censys)",
+        "Email harvesting",
+        "Technology fingerprinting (web technologies, CMS, frameworks)"
+      ],
+      "deliverables": [
+        "Target intelligence report",
+        "Network map and asset inventory",
+        "Technology stack overview"
+      ],
+      "tools": ["nmap", "subfinder", "amass", "shodan", "theHarvester", "recon-ng"]
+    },
+    {
+      "number": 3,
+      "name": "Threat Modeling",
+      "description": "Analyze gathered intelligence to identify the most likely attack vectors and prioritize testing efforts based on business risk.",
+      "objectives": [
+        "Identify critical assets and their attack surface",
+        "Prioritize vulnerabilities by business impact",
+        "Develop attack scenarios and hypotheses"
+      ],
+      "activities": [
+        "Asset classification by sensitivity",
+        "Attack surface analysis",
+        "Threat actor profiling",
+        "Attack scenario development",
+        "Risk prioritization"
+      ],
+      "deliverables": [
+        "Threat model document",
+        "Prioritized attack scenarios",
+        "Risk assessment matrix"
+      ],
+      "tools": []
+    },
+    {
+      "number": 4,
+      "name": "Vulnerability Analysis",
+      "description": "Systematic identification of vulnerabilities in the target environment using automated scanning and manual testing.",
+      "objectives": [
+        "Identify security vulnerabilities across all in-scope systems",
+        "Validate scanner findings to eliminate false positives",
+        "Map vulnerabilities to CVE/CWE databases"
+      ],
+      "activities": [
+        "Automated vulnerability scanning (Nuclei, Nikto, Nessus)",
+        "Port scanning and service enumeration",
+        "Web application scanning",
+        "Manual testing to validate automated findings",
+        "CVE research for identified software versions",
+        "Configuration review"
+      ],
+      "deliverables": [
+        "Vulnerability scan reports",
+        "Validated vulnerability list with risk ratings"
+      ],
+      "tools": ["nuclei", "nmap", "nikto", "sqlmap", "sslyze", "dalfox"]
+    },
+    {
+      "number": 5,
+      "name": "Exploitation",
+      "description": "Attempt to exploit identified vulnerabilities to demonstrate real-world impact and gain unauthorized access.",
+      "objectives": [
+        "Confirm exploitability of identified vulnerabilities",
+        "Demonstrate business impact of successful exploitation",
+        "Gain initial foothold in the target environment"
+      ],
+      "activities": [
+        "Safe exploitation of confirmed vulnerabilities",
+        "Web application exploitation (SQLi, XSS, RCE)",
+        "Credential attacks (brute force, credential stuffing)",
+        "Exploit known CVEs using Metasploit or custom exploits",
+        "Authentication bypass attempts",
+        "Business logic exploitation"
+      ],
+      "deliverables": [
+        "Exploitation evidence (screenshots, logs, proof-of-concept)",
+        "Documented exploitation chains"
+      ],
+      "tools": ["metasploit", "sqlmap", "hydra", "dalfox", "searchsploit"]
+    },
+    {
+      "number": 6,
+      "name": "Post-Exploitation",
+      "description": "After gaining initial access, assess the extent of the compromise, maintain access, and demonstrate lateral movement capabilities.",
+      "objectives": [
+        "Determine the extent of a real attacker's reach post-compromise",
+        "Demonstrate lateral movement and privilege escalation",
+        "Assess data exfiltration potential"
+      ],
+      "activities": [
+        "Privilege escalation on compromised systems",
+        "Lateral movement to internal systems",
+        "Credential harvesting (password hashes, cleartext passwords)",
+        "Data exfiltration demonstration (sample only)",
+        "Persistence mechanism analysis",
+        "Network pivoting and tunneling"
+      ],
+      "deliverables": [
+        "Post-exploitation narrative with evidence",
+        "Data exposure assessment"
+      ],
+      "tools": ["metasploit", "mimikatz", "bloodhound", "john", "hashcat"]
+    },
+    {
+      "number": 7,
+      "name": "Reporting",
+      "description": "Document all findings in a professional report that provides actionable remediation guidance for both technical and executive audiences.",
+      "objectives": [
+        "Communicate findings clearly to both technical and executive audiences",
+        "Provide actionable remediation guidance prioritized by risk",
+        "Document methodology and testing evidence"
+      ],
+      "activities": [
+        "Executive summary writing",
+        "Technical finding documentation with evidence",
+        "CVSS scoring for each vulnerability",
+        "Remediation roadmap development",
+        "Risk matrix creation",
+        "Report review and QA"
+      ],
+      "deliverables": [
+        "Executive summary report",
+        "Technical findings report",
+        "Remediation roadmap",
+        "Risk matrix",
+        "Raw tool outputs as appendices"
+      ],
+      "tools": []
+    }
+  ]
+}

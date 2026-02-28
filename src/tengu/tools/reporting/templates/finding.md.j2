@@ -1,0 +1,88 @@
+# {{ finding.id }}: {{ finding.title }}
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Finding ID** | {{ finding.id }} |
+| **Title** | {{ finding.title }} |
+| **Severity** | {{ finding.severity | upper }} |
+| **CVSS Score** | {{ finding.cvss_score }} / 10.0 |
+| **CVSS Vector** | `{{ finding.cvss_vector or 'Not calculated' }}` |
+| **CWE** | {% if finding.cwe_id %}[CWE-{{ finding.cwe_id }}](https://cwe.mitre.org/data/definitions/{{ finding.cwe_id }}.html): {{ finding.cwe_name or '' }}{% else %}N/A{% endif %} |
+| **OWASP Category** | {{ finding.owasp_category or 'N/A' }} |
+| **Affected Asset** | `{{ finding.affected_asset }}` |
+| **Detection Tool** | {{ finding.tool }} |
+| **Status** | {{ finding.status | title }} |
+| **Date Discovered** | {{ finding.timestamp.strftime('%Y-%m-%d %H:%M UTC') }} |
+
+{% if finding.cve_ids %}
+**Related CVEs:**
+{% for cve in finding.cve_ids %}
+- [{{ cve }}](https://nvd.nist.gov/vuln/detail/{{ cve }})
+{% endfor %}
+{% endif %}
+
+---
+
+## Description
+
+{{ finding.description }}
+
+## Impact
+
+{{ finding.impact or "Impact analysis not provided." }}
+
+---
+
+## Steps to Reproduce
+
+{% for step in finding.steps_to_reproduce %}
+{{ loop.index }}. {{ step }}
+{% endfor %}
+
+{% if not finding.steps_to_reproduce %}
+*Steps to reproduce not documented.*
+{% endif %}
+
+---
+
+## Evidence
+
+{% for ev in finding.evidence %}
+### {{ ev.title }} (`{{ ev.type }}`)
+
+```
+{{ ev.content }}
+```
+
+{% endfor %}
+
+{% if not finding.evidence %}
+*No evidence captured.*
+{% endif %}
+
+---
+
+## Remediation
+
+### Quick Fix
+
+{{ finding.remediation_short or "Apply the recommended remediation below." }}
+
+### Long-Term Solution
+
+{{ finding.remediation_long or "Implement proper security controls per industry standards." }}
+
+---
+
+## References
+
+{% for ref in finding.references %}
+- {{ ref }}
+{% endfor %}
+
+{% if not finding.references %}
+- [OWASP Top 10](https://owasp.org/Top10/)
+- [NVD CVE Database](https://nvd.nist.gov/)
+{% endif %}
