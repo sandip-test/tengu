@@ -637,7 +637,19 @@ mcp.prompt()(pwn_target)
 
 def main() -> None:
     """Start the Tengu MCP server."""
+    import argparse
     from tengu.config import get_config
+
+    parser = argparse.ArgumentParser(description="Tengu MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse", "http", "streamable-http"],
+        default="stdio",
+        help="Transport protocol (default: stdio)",
+    )
+    parser.add_argument("--host", default="127.0.0.1", help="Host to bind (SSE/HTTP only)")
+    parser.add_argument("--port", type=int, default=8000, help="Port to listen on (SSE/HTTP only)")
+    args = parser.parse_args()
 
     cfg = get_config()
 
@@ -651,9 +663,13 @@ def main() -> None:
         log_level=cfg.server.log_level,
         allowed_hosts=cfg.targets.allowed_hosts,
         stealth_enabled=cfg.stealth.enabled,
+        transport=args.transport,
     )
 
-    mcp.run()
+    if args.transport == "stdio":
+        mcp.run()
+    else:
+        mcp.run(transport=args.transport, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":
