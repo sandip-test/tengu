@@ -77,3 +77,22 @@ blocked_hosts = ["myevilsite.com"]
         assert "myevilsite.com" in blocked
         assert "localhost" in blocked  # Default still present
         Path(f.name).unlink()
+
+    def test_effective_blocked_hosts_respects_explicit_allowed(self):
+        """Hosts in allowed_hosts should be removed from the default blocklist."""
+        toml_content = """
+[targets]
+allowed_hosts = ["127.0.0.1", "localhost"]
+"""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".toml", delete=False
+        ) as f:
+            f.write(toml_content)
+            f.flush()
+            cfg = load_config(f.name)
+
+        blocked = cfg.effective_blocked_hosts
+        assert "127.0.0.1" not in blocked
+        assert "localhost" not in blocked
+        assert "*.gov" in blocked  # Other defaults remain
+        Path(f.name).unlink()

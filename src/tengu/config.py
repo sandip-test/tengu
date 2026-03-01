@@ -110,8 +110,15 @@ class TenguConfig(BaseModel):
 
     @property
     def effective_blocked_hosts(self) -> list[str]:
-        """Returns combined default + user-configured blocked hosts."""
-        return list(set(_DEFAULT_BLOCKED_HOSTS + self.targets.blocked_hosts))
+        """Returns combined default + user-configured blocked hosts.
+
+        Hosts explicitly listed in allowed_hosts are removed from the default
+        blocklist, allowing lab/loopback targets (e.g. 127.0.0.1, localhost)
+        to be scanned when intentionally permitted via tengu.toml.
+        """
+        explicitly_allowed = {h.strip().lower() for h in self.targets.allowed_hosts}
+        base = [h for h in _DEFAULT_BLOCKED_HOSTS if h not in explicitly_allowed]
+        return list(set(base + self.targets.blocked_hosts))
 
 
 def load_config(config_path: str | Path | None = None) -> TenguConfig:
