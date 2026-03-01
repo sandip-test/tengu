@@ -11,6 +11,7 @@ import pytest
 from tengu.tools.reporting.generate import (
     _SEVERITY_WEIGHTS,
     _build_risk_matrix,
+    _normalize_finding,
     _score_to_rating,
 )
 from tengu.types import Finding
@@ -362,3 +363,135 @@ class TestGenerateReport:
 
         assert result["report_type"] == "executive"
         assert result["tool"] == "generate_report"
+
+
+# ---------------------------------------------------------------------------
+# TestNormalizeFinding — unit tests for _normalize_finding helper
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeFinding:
+    def test_normalize_finding_auto_id(self):
+        """Missing 'id' field — auto-generates an ID."""
+        f = {"title": "XSS", "severity": "high", "description": "d", "tool": "dalfox"}
+        result = _normalize_finding(f, 1)
+        assert result["id"].startswith("TENGU-")
+
+    def test_normalize_finding_url_to_affected_asset(self):
+        """'url' field is mapped to 'affected_asset' when affected_asset absent."""
+        f = {
+            "title": "XSS",
+            "severity": "high",
+            "description": "d",
+            "tool": "dalfox",
+            "url": "https://example.com/search",
+        }
+        result = _normalize_finding(f, 1)
+        assert result["affected_asset"] == "https://example.com/search"
+        assert "url" not in result
+
+    def test_normalize_finding_evidence_string(self):
+        """String 'evidence' is converted to list[Evidence dict]."""
+        f = {
+            "title": "SQLi",
+            "severity": "critical",
+            "description": "d",
+            "tool": "sqlmap",
+            "evidence": "sqlmap output here",
+        }
+        result = _normalize_finding(f, 1)
+        assert isinstance(result["evidence"], list)
+        assert len(result["evidence"]) == 1
+        assert result["evidence"][0]["content"] == "sqlmap output here"
+        assert result["evidence"][0]["type"] == "tool_output"
+
+    def test_normalize_finding_evidence_list_of_strings(self):
+        """List[str] 'evidence' is converted to list[Evidence dict]."""
+        f = {
+            "title": "SQLi",
+            "severity": "critical",
+            "description": "d",
+            "tool": "sqlmap",
+            "evidence": ["line1", "line2"],
+        }
+        result = _normalize_finding(f, 1)
+        assert isinstance(result["evidence"], list)
+        assert len(result["evidence"]) == 2
+        assert all(e["type"] == "tool_output" for e in result["evidence"])
+
+    def test_normalize_finding_remediation_mapping(self):
+        """'remediation' (string) is mapped to 'remediation_short'."""
+        f = {
+            "title": "XSS",
+            "severity": "medium",
+            "description": "d",
+            "tool": "dalfox",
+            "remediation": "Sanitize user input.",
+        }
+        result = _normalize_finding(f, 1)
+        assert result["remediation_short"] == "Sanitize user input."
+        assert "remediation" not in result
+
+    def test_normalize_finding_removes_extra_keys(self):
+        """Extra keys 'url', 'target', 'parameter' are removed."""
+        f = {
+            "title": "XSS",
+            "severity": "medium",
+            "description": "d",
+            "tool": "dalfox",
+            "affected_asset": "https://example.com",
+            "url": "https://example.com/page",
+            "target": "example.com",
+            "parameter": "q",
+        }
+        result = _normalize_finding(f, 1)
+        assert "url" not in result
+        assert "target" not in result
+        assert "parameter" not in result
+
+    def test_normalize_finding_preserves_existing_affected_asset(self):
+        """'affected_asset' is not overwritten when already present."""
+        f = {
+            "title": "XSS",
+            "severity": "medium",
+            "description": "d",
+            "tool": "dalfox",
+            "affected_asset": "https://example.com/original",
+            "url": "https://example.com/other",
+        }
+        result = _normalize_finding(f, 1)
+        assert result["affected_asset"] == "https://example.com/original"
+
+    async def test_generate_report_with_simplified_findings(self, mock_ctx):
+        """End-to-end: simplified AI format findings are parsed — findings_count > 0."""
+        from tengu.tools.reporting.generate import generate_report
+
+        simplified_findings = [
+            {
+                "title": "SQL Injection",
+                "severity": "critical",
+                "description": "The login form is vulnerable to SQLi.",
+                "tool": "sqlmap",
+                "url": "https://target.com/login",
+                "evidence": "GET /login?id=1' -- HTTP/1.1 200 OK",
+                "remediation": "Use parameterized queries.",
+            },
+            {
+                "title": "Reflected XSS",
+                "severity": "high",
+                "description": "The search parameter reflects unescaped input.",
+                "tool": "dalfox",
+                "url": "https://target.com/search",
+                "parameter": "q",
+                "evidence": ["Payload: <script>alert(1)</script>", "Response: 200 OK"],
+            },
+        ]
+
+        result = await generate_report(
+            mock_ctx,
+            client_name="Acme Corp",
+            findings=simplified_findings,
+        )
+
+        assert result["findings_count"] == 2
+        assert result["overall_risk_score"] > 0

@@ -31,6 +31,50 @@ _SEVERITY_WEIGHTS = {
 }
 
 
+def _normalize_finding(f: dict, index: int) -> dict:  # type: ignore[type-arg]
+    """Normalize a loose finding dict into a Finding-compatible dict.
+
+    Accepts simplified formats from AI tool calls (e.g. url/parameter/remediation
+    as plain strings) and maps them to the Finding model's field names.
+    """
+    out = dict(f)
+
+    # Auto-generate ID if missing
+    if not out.get("id"):
+        out["id"] = f"TENGU-{datetime.now().year}-{index:03d}"
+
+    # Map 'url' → 'affected_asset' if affected_asset not present
+    if not out.get("affected_asset"):
+        out["affected_asset"] = out.pop("url", out.get("target", "unknown"))
+
+    # Remove keys that don't belong to Finding
+    for key in ("url", "target", "parameter"):
+        out.pop(key, None)
+
+    # Map 'remediation' (string) → 'remediation_short'
+    if "remediation" in out and not out.get("remediation_short"):
+        out["remediation_short"] = out.pop("remediation")
+    else:
+        out.pop("remediation", None)
+
+    # Normalize 'evidence': str or list[str] → list[Evidence dict]
+    raw_evidence = out.get("evidence")
+    if isinstance(raw_evidence, str):
+        out["evidence"] = [{"type": "tool_output", "title": "Evidence", "content": raw_evidence}]
+    elif isinstance(raw_evidence, list):
+        normalized_ev = []
+        for ev in raw_evidence:
+            if isinstance(ev, str):
+                normalized_ev.append({"type": "tool_output", "title": "Evidence", "content": ev})
+            elif isinstance(ev, dict) and "type" in ev and "title" in ev and "content" in ev:
+                normalized_ev.append(ev)
+        out["evidence"] = normalized_ev
+    else:
+        out.pop("evidence", None)
+
+    return out
+
+
 def _score_to_rating(score: float) -> str:
     if score >= 9.0:
         return "CRITICAL"
@@ -109,10 +153,8 @@ async def generate_report(
     parsed_findings: list[Finding] = []
     for f in (findings or []):
         try:
-            # Auto-generate ID if missing
-            if not f.get("id"):
-                f["id"] = f"TENGU-{datetime.now().year}-{len(parsed_findings) + 1:03d}"
-            parsed_findings.append(Finding(**f))
+            normalized = _normalize_finding(f, len(parsed_findings) + 1)
+            parsed_findings.append(Finding(**normalized))
         except Exception as exc:
             logger.warning("Skipping invalid finding", error=str(exc))
 

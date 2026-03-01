@@ -29,7 +29,7 @@ date: "{{ report.generated_at.strftime('%Y-%m-%d') }}"
 
 ---
 
-## 1. EXECUTIVE SUMMARY {#executive-summary}
+## 1. EXECUTIVE SUMMARY
 
 **Overall Security Posture Score:** {{ report.overall_risk_score | round(1) }} / 10.0
 **Risk Rating:** {{ risk_rating }}
@@ -55,7 +55,7 @@ date: "{{ report.generated_at.strftime('%Y-%m-%d') }}"
 
 ---
 
-## 2. SCOPE AND RULES OF ENGAGEMENT {#scope}
+## 2. SCOPE AND RULES OF ENGAGEMENT
 
 ### In-Scope Targets
 
@@ -77,7 +77,7 @@ No explicit exclusions defined.
 
 ---
 
-## 3. METHODOLOGY {#methodology}
+## 3. METHODOLOGY
 
 This engagement followed the **{{ report.methodology }}** (Penetration Testing Execution Standard) methodology, covering the following phases:
 
@@ -98,7 +98,7 @@ This engagement followed the **{{ report.methodology }}** (Penetration Testing E
 
 ---
 
-## 4. FINDINGS SUMMARY {#findings-summary}
+## 4. FINDINGS SUMMARY
 
 | ID | Title | Severity | CVSS | OWASP | Asset | Status |
 |----|-------|----------|------|-------|-------|--------|
@@ -107,7 +107,7 @@ This engagement followed the **{{ report.methodology }}** (Penetration Testing E
 
 ---
 
-## 5. DETAILED FINDINGS {#detailed-findings}
+## 5. DETAILED FINDINGS
 
 {% for finding in report.findings | sort(attribute='cvss_score', reverse=True) %}
 ---
@@ -176,7 +176,7 @@ This engagement followed the **{{ report.methodology }}** (Penetration Testing E
 
 ---
 
-## 6. REMEDIATION ROADMAP {#remediation-roadmap}
+## 6. REMEDIATION ROADMAP
 
 ### Immediate Action (0-30 Days)
 
@@ -204,13 +204,13 @@ This engagement followed the **{{ report.methodology }}** (Penetration Testing E
 
 ---
 
-## 7. CONCLUSION {#conclusion}
+## 7. CONCLUSION
 
 {{ report.conclusion or "Conclusion not provided." }}
 
 ---
 
-## 8. APPENDICES {#appendices}
+## 8. APPENDICES
 
 ### Appendix A: Glossary
 
