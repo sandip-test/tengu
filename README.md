@@ -45,6 +45,60 @@
 
 ## Quick Start
 
+### Docker Quickstart (Recommended)
+
+The fastest way to get Tengu running — no manual tool installation required.
+
+```bash
+git clone https://github.com/rfunix/tengu.git && cd tengu
+docker compose up -d
+```
+
+Connect Claude Code to the running server:
+
+```bash
+claude mcp add --transport sse tengu http://localhost:8000/sse
+```
+
+**With lab targets (Juice Shop + DVWA):**
+
+```bash
+docker compose --profile lab up -d
+```
+
+**With Metasploit + ZAP + labs:**
+
+```bash
+docker compose --profile exploit --profile proxy --profile lab up -d
+```
+
+**Image tiers** — choose the right size for your use case:
+
+| Tier | Size | MCP Tools | Use case |
+|------|------|-----------|----------|
+| `minimal` | ~480MB | 17 | Lightweight analysis, CVE research, reporting |
+| `core` | ~7GB | 47 | Full pentest toolkit (default) |
+| `full` | ~8GB | 57 | Everything + AD, wireless, stealth/OPSEC |
+
+```bash
+TENGU_TIER=minimal docker compose build   # lightweight
+TENGU_TIER=core    docker compose build   # default
+TENGU_TIER=full    docker compose build   # everything
+```
+
+**Scan custom targets** without editing files:
+
+```bash
+TENGU_ALLOWED_HOSTS="192.168.1.0/24,10.0.0.0/8" docker compose up -d
+```
+
+> **All tiers include all 34 prompts and 19 resources** — only the binary tools differ.
+> See [Docker Image Tiers](#docker-image-tiers) for the full breakdown.
+
+---
+
+### Manual Install & Run
+
 ### Prerequisites
 
 - Python 3.12+
@@ -129,6 +183,212 @@ Edit `tengu.toml` before running any scan — only listed targets will be accept
 [targets]
 allowed_hosts = ["192.168.1.0/24", "example.com"]
 ```
+
+---
+
+## Docker Image Tiers
+
+> **Prompts (34) and Resources (19) are identical across all tiers** — only binary tools differ.
+
+### Tier Comparison
+
+| | `minimal` (~480MB) | `core` (~7GB) | `full` (~8GB) |
+|---|:---:|:---:|:---:|
+| **MCP Tools** | 17 | 47 | 57 |
+| Utility & validation | ✓ | ✓ | ✓ |
+| HTTP analysis (headers, CORS) | ✓ | ✓ | ✓ |
+| SSL/TLS (sslyze) | ✓ | ✓ | ✓ |
+| DNS enumeration (dnspython) | ✓ | ✓ | ✓ |
+| WHOIS (python-whois) | ✓ | ✓ | ✓ |
+| CVE lookup (NVD API) | ✓ | ✓ | ✓ |
+| GraphQL security checks | ✓ | ✓ | ✓ |
+| Hash identification | ✓ | ✓ | ✓ |
+| Finding correlation & risk scoring | ✓ | ✓ | ✓ |
+| Report generation | ✓ | ✓ | ✓ |
+| Shodan (API key required) | ✓ | ✓ | ✓ |
+| Metasploit (via RPC profile) | ✓ | ✓ | ✓ |
+| Anonymity & proxy checks | ✓ | ✓ | ✓ |
+| **Recon** (nmap, masscan, amass) | — | ✓ | ✓ |
+| **Recon Go** (subfinder, gowitness, subjack) | — | ✓ | ✓ |
+| **Web scanning** (nuclei, nikto, ffuf, gobuster) | — | ✓ | ✓ |
+| **Web scanning** (wpscan, testssl.sh) | — | ✓ | ✓ |
+| **OSINT** (theHarvester, whatweb) | — | ✓ | ✓ |
+| **Injection** (sqlmap, dalfox) | — | ✓ | ✓ |
+| **ExploitDB** (searchsploit) | — | ✓ | ✓ |
+| **Brute force** (hydra, john, hashcat, cewl) | — | ✓ | ✓ |
+| **Secrets** (gitleaks, trufflehog) | — | ✓ | ✓ |
+| **Container** (trivy) | — | ✓ | ✓ |
+| **Recon** (dnsrecon, httrack) | — | ✓ | ✓ |
+| **Active Directory** (enum4linux-ng, nxc, impacket) | — | — | ✓ |
+| **Wireless** (aircrack-ng) | — | — | ✓ |
+| **Stealth/OPSEC** (tor, torsocks, proxychains4) | — | — | ✓ |
+| **API** (arjun) | — | — | ✓ |
+
+### `minimal` — 17 MCP Tools
+
+Pure Python tools. No external binaries required.
+
+| Tool | MCP function | Requires |
+|------|-------------|---------|
+| Target validation | `validate_target` | — |
+| Tool inventory | `check_tools` | — |
+| HTTP headers analysis | `analyze_headers` | httpx |
+| CORS misconfiguration | `test_cors` | httpx |
+| SSL/TLS analysis | `ssl_tls_check` | sslyze |
+| DNS enumeration | `dns_enumerate` | dnspython |
+| WHOIS lookup | `whois_lookup` | python-whois |
+| Hash identification | `hash_identify` | — |
+| CVE lookup | `cve_lookup`, `cve_search` | NVD API |
+| GraphQL checks | `graphql_security_check` | httpx |
+| Finding correlation | `correlate_findings` | — |
+| Risk scoring | `score_risk` | — |
+| Report generation | `generate_report` | — |
+| Shodan | `shodan_lookup` | API key |
+| Anonymity check | `check_anonymity` | — |
+| Proxy validation | `proxy_check` | — |
+| Metasploit (4 tools) | `msf_search/module_info/run/sessions` | profile: exploit |
+
+### `core` — 47 MCP Tools (default)
+
+Adds all essential pentest binaries via apt + Go toolchain.
+
+**Reconnaissance (+10)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| Port scanner | nmap | `nmap_scan` |
+| Fast port scanner | masscan | `masscan_scan` |
+| Subdomain enum | subfinder | `subfinder_enum` |
+| Subdomain enum | amass | `amass_enum` |
+| DNS recon | dnsrecon | `dnsrecon_scan` |
+| Subdomain takeover | subjack | `subjack_check` |
+| Web screenshots | gowitness | `gowitness_screenshot` |
+| Site mirroring | httrack | `httrack_mirror` |
+
+**Web Scanning (+9)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| Vuln templates | nuclei | `nuclei_scan` |
+| Web server scanner | nikto | `nikto_scan` |
+| Directory fuzzer | ffuf | `ffuf_fuzz` |
+| Directory brute | gobuster | `gobuster_scan` |
+| WordPress scanner | wpscan | `wpscan_scan` |
+| TLS deep scan | testssl.sh | `testssl_check` |
+
+**OSINT (+2)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| Email/domain recon | theHarvester | `theharvester_scan` |
+| Tech fingerprint | whatweb | `whatweb_scan` |
+
+**Injection (+2)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| SQL injection | sqlmap | `sqlmap_scan` |
+| XSS scanner | dalfox | `xss_scan` |
+
+**Exploitation (+1)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| Exploit search | searchsploit | `searchsploit_query` |
+
+**Brute Force (+4)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| Credential attack | hydra | `hydra_attack` |
+| Hash cracker | john + hashcat | `hash_crack` |
+| Wordlist generator | cewl | `cewl_generate` |
+
+**Secrets (+2)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| Git secret scan | gitleaks | `gitleaks_scan` |
+| Secret scanner | trufflehog | `trufflehog_scan` |
+
+**Container (+1)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| Container vuln scan | trivy | `trivy_scan` |
+
+### `full` — 57 MCP Tools
+
+Adds Active Directory, wireless, stealth, and API testing on top of `core`.
+
+**Active Directory (+3)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| SMB/AD enum | enum4linux-ng | `enum4linux_scan` |
+| Network exec | nxc (NetExec) | `nxc_enum` |
+| Kerberoasting | impacket (GetUserSPNs.py) | `impacket_kerberoast` |
+
+**Wireless (+1)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| WiFi scanning | aircrack-ng / airodump-ng | `aircrack_scan` |
+
+**Stealth / OPSEC (+3)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| Tor circuit check | tor | `tor_check` |
+| Tor identity rotate | tor | `tor_new_identity` |
+| Full identity rotate | tor + torsocks | `rotate_identity` |
+
+Also includes: `proxychains4`, `torsocks`, `socat` — used transparently by the stealth layer.
+
+**API (+1)**
+
+| Tool | Binary | MCP function |
+|------|--------|-------------|
+| Hidden param discovery | arjun | `arjun_discover` |
+
+---
+
+### Prompts — 34 (all tiers)
+
+Pre-built workflow templates that guide Claude through complete engagements.
+
+| Category | Prompts |
+|----------|---------|
+| **Pentest workflows** | `full_pentest`, `quick_recon`, `web_app_assessment` |
+| **Vulnerability assessment** | `assess_injection`, `assess_access_control`, `assess_crypto`, `assess_misconfig` |
+| **OSINT** | `osint_investigation` |
+| **Reports** | `executive_report`, `technical_report`, `full_pentest_report`, `finding_detail`, `risk_matrix`, `remediation_plan`, `retest_report` |
+| **Stealth/OPSEC** | `stealth_assessment`, `opsec_checklist` |
+| **Specialized** | `ad_assessment`, `api_security_assessment`, `container_assessment`, `cloud_assessment`, `wireless_assessment`, `bug_bounty_workflow`, `compliance_assessment` |
+| **Quick actions** | `explore_url`, `map_network`, `hunt_subdomains`, `find_vulns`, `find_secrets`, `go_stealth`, `crack_wifi`, `pwn_target` |
+
+---
+
+### Resources — 19 (all tiers)
+
+Static reference data loaded by Claude during engagements.
+
+| URI | Content |
+|-----|---------|
+| `owasp://top10/2025` | OWASP Top 10:2025 full list |
+| `owasp://top10/2025/{A01..A10}` | Per-category details + testing checklist |
+| `owasp://api-security/top10` | OWASP API Security Top 10 (2023) |
+| `owasp://api-security/top10/{API1..API10}` | Per-category details |
+| `ptes://phases` | PTES 7-phase methodology overview |
+| `ptes://phase/{1..7}` | Phase details (objectives, tools, deliverables) |
+| `checklist://web-application` | Web app pentest checklist (OWASP Testing Guide) |
+| `checklist://api` | API pentest checklist |
+| `checklist://network` | Network infrastructure checklist |
+| `mitre://attack/tactics` | MITRE ATT&CK Enterprise tactics + techniques |
+| `mitre://attack/technique/{T1xxx}` | Technique detail by ID |
+| `creds://defaults/{product}` | Default credentials database |
+| `tools://catalog` | Live tool availability status |
+| `tools://{tool}/usage` | Usage guide for nmap, nuclei, sqlmap, metasploit, trivy, amass |
 
 ---
 

@@ -152,6 +152,10 @@ def load_config(config_path: str | Path | None = None) -> TenguConfig:
     if shodan_key := os.environ.get("TENGU_SHODAN_API_KEY"):
         raw.setdefault("osint", {})["shodan_api_key"] = shodan_key
 
+    if allowed_hosts := os.environ.get("TENGU_ALLOWED_HOSTS"):
+        hosts = [h.strip() for h in allowed_hosts.split(",") if h.strip()]
+        raw.setdefault("targets", {})["allowed_hosts"] = hosts
+
     return TenguConfig.model_validate(raw)
 
 

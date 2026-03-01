@@ -1,0 +1,108 @@
+services:
+
+  # ── Tengu MCP Server ─────────────────────────────────────────────────────────
+  tengu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TENGU_TIER: ${TENGU_TIER:-core}
+    image: tengu:${TENGU_TIER:-core}
+    ports:
+      - "${TENGU_PORT:-8000}:8000"
+    cap_add:
+      - NET_RAW    # required for nmap SYN scan and masscan raw sockets
+      - NET_ADMIN  # required for masscan
+    security_opt:
+      - no-new-privileges
+    volumes:
+      - tengu-output:/app/output
+      - tengu-logs:/app/logs
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - TENGU_CONFIG_PATH=/app/tengu.toml
+      - TENGU_ALLOWED_HOSTS=${TENGU_ALLOWED_HOSTS:-}
+      - TENGU_LOG_LEVEL=${TENGU_LOG_LEVEL:-INFO}
+      - NVD_API_KEY=${NVD_API_KEY:-}
+      - TENGU_SHODAN_API_KEY=${TENGU_SHODAN_API_KEY:-}
+      - ZAP_BASE_URL=http://tengu-zap:8080
+      - ZAP_API_KEY=${ZAP_API_KEY:-tengu-zap-key}
+      - MSF_RPC_HOST=tengu-msf
+      - MSF_RPC_PORT=55553
+      - MSF_RPC_PASSWORD=${MSF_RPC_PASSWORD:-tengu}
+      - MSF_RPC_SSL=true
+    restart: unless-stopped
+    networks:
+      tengu-net:
+        aliases:
+          - tengu
+
+  # ── Metasploit RPC (profile: exploit) ────────────────────────────────────────
+  tengu-msf:
+    image: metasploitframework/metasploit-framework:latest
+    profiles:
+      - exploit
+    environment:
+      - MSF_RPC_PASSWORD=${MSF_RPC_PASSWORD:-tengu}
+    command: >
+      bash -c "
+        gem install metasploit-framework --no-document 2>/dev/null || true;
+        msfdb init &&
+        msfrpcd -P ${MSF_RPC_PASSWORD:-tengu} -S -f -a 0.0.0.0
+      "
+    restart: unless-stopped
+    networks:
+      tengu-net:
+        aliases:
+          - tengu-msf
+
+  # ── OWASP ZAP (profile: proxy) ───────────────────────────────────────────────
+  tengu-zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    profiles:
+      - proxy
+    command: zap.sh -daemon -host 0.0.0.0 -port 8080
+      -config api.key=${ZAP_API_KEY:-tengu-zap-key}
+      -config api.addrs.addr.name=.*
+      -config api.addrs.addr.regex=true
+    restart: unless-stopped
+    networks:
+      tengu-net:
+        aliases:
+          - tengu-zap
+
+  # ── Lab Targets (profile: lab) ───────────────────────────────────────────────
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    profiles:
+      - lab
+    restart: unless-stopped
+    networks:
+      tengu-net:
+        aliases:
+          - juice-shop
+
+  dvwa:
+    image: vulnerables/web-dvwa:latest
+    profiles:
+      - lab
+    restart: unless-stopped
+    networks:
+      tengu-net:
+        aliases:
+          - dvwa
+
+networks:
+  tengu-net:
+    name: tengu-net
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  tengu-output:
+    name: tengu-output
+  tengu-logs:
+    name: tengu-logs
