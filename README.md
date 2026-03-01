@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>AI-powered penetration testing through MCP. 56 security tools orchestrated by Claude.</strong>
+  <strong>From recon to report — AI-assisted pentesting in one command.</strong>
 </p>
 
 <p align="center">
