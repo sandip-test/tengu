@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Tengu demo" width="800"/>
+  <img src="docs/tengu-demo-opt.gif" alt="Tengu demo" width="800"/>
 </p>
 
 <p align="center">
