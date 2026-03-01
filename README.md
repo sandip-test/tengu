@@ -5,6 +5,11 @@
 </p>
 
 [![CI](https://github.com/rfunix/tengu/actions/workflows/ci.yml/badge.svg)](https://github.com/rfunix/tengu/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
+[![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io)
+[![Tools](https://img.shields.io/badge/tools-56-orange.svg)]()
+[![Version](https://img.shields.io/badge/version-0.2.0-brightgreen.svg)]()
 
 Tengu is an MCP (Model Context Protocol) server that provides an intelligent abstraction layer over industry-standard penetration testing tools. Integrates with Claude Code and Claude Desktop to enable AI-assisted pentesting workflows.
 
