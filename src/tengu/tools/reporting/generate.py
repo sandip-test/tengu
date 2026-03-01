@@ -191,7 +191,9 @@ async def generate_report(
     owasp_distribution: dict[str, int] = {}
     for finding in parsed_findings:
         if finding.owasp_category:
-            owasp_distribution[finding.owasp_category] = owasp_distribution.get(finding.owasp_category, 0) + 1
+            owasp_distribution[finding.owasp_category] = (
+                owasp_distribution.get(finding.owasp_category, 0) + 1
+            )
 
     template_context = {
         "report": report,
