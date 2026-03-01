@@ -1,0 +1,82 @@
+[server]
+name = "Tengu"
+log_level = "INFO"
+audit_log_path = "/app/logs/tengu-audit.log"
+
+[targets]
+# Pre-configured for Docker networking — override with TENGU_ALLOWED_HOSTS env var
+allowed_hosts = [
+    "172.16.0.0/12",    # Docker bridge + custom networks (172.17-20.x.x)
+    "192.168.0.0/16",   # Host network / lab ranges
+    "10.0.0.0/8",       # VPN / cloud lab
+]
+
+# Always blocked, even if listed in allowed_hosts
+blocked_hosts = []
+
+[tools.paths]
+# Leave empty for auto-detection via PATH
+nmap = ""
+masscan = ""
+nuclei = ""
+nikto = ""
+ffuf = ""
+subfinder = ""
+sqlmap = ""
+dalfox = ""
+hydra = ""
+john = ""
+hashcat = ""
+searchsploit = ""
+metasploit_rpc = "https://tengu-msf:55553"
+
+[tools.defaults]
+nmap_timing = "T3"
+nuclei_severity = ["medium", "high", "critical"]
+scan_timeout = 600  # seconds
+wordlist_path = "/usr/share/seclists/Discovery/Web-Content/common.txt"
+
+[rate_limiting]
+max_scans_per_minute = 10
+max_concurrent_scans = 3
+
+[cve]
+nvd_api_key = ""                         # Optional — increases NVD rate limit
+cache_path = "/app/output/.tengu/cve_cache.db"
+cache_ttl_hours = 24
+
+[stealth]
+enabled = false                    # Master switch — disabled by default
+
+[stealth.proxy]
+enabled = false
+type = "socks5"                    # socks5, socks4, http, https
+host = "127.0.0.1"
+port = 9050                        # Tor SOCKS default
+
+[stealth.wrapper]
+mode = "none"                      # none, proxychains, torsocks
+
+[stealth.timing]
+enabled = false
+min_delay_ms = 100
+max_delay_ms = 3000
+jitter_percent = 30
+
+[stealth.user_agent]
+enabled = false
+rotate_every = 10                  # Rotate every N requests
+browser_type = "random"            # chrome, firefox, safari, edge, random
+
+[stealth.dns]
+enabled = false
+method = "system"                  # system, doh, tor
+doh_url = "https://cloudflare-dns.com/dns-query"
+
+[cloud]
+aws_profile = ""
+gcp_project = ""
+azure_subscription = ""
+
+[osint]
+shodan_api_key = ""

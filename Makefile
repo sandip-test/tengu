@@ -4,6 +4,8 @@
 .PHONY: install-tools-osint install-tools-secrets install-tools-container
 .PHONY: install-tools-cloud install-tools-api install-tools-ad
 .PHONY: install-tools-wireless install-tools-stealth
+.PHONY: docker-build docker-up docker-down docker-logs docker-shell
+.PHONY: docker-lab docker-full docker-clean
 
 # ============================================================
 # CONFIGURATION
@@ -125,3 +127,32 @@ clean: ## Remove build artifacts and cache
 	rm -rf dist/ build/ .pytest_cache/ htmlcov/ .mypy_cache/ .ruff_cache/
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
+# ============================================================
+# DOCKER
+# ============================================================
+TENGU_TIER ?= core
+
+docker-build: ## Build Docker image (TENGU_TIER=core|full|minimal)
+	docker compose build --build-arg TENGU_TIER=$(TENGU_TIER)
+
+docker-up: ## Start Tengu in Docker
+	docker compose up -d
+
+docker-down: ## Stop Tengu Docker containers
+	docker compose down
+
+docker-logs: ## Tail Tengu Docker logs
+	docker compose logs -f tengu
+
+docker-shell: ## Open shell in Tengu container
+	docker compose exec tengu bash
+
+docker-lab: ## Start Tengu + lab targets (Juice Shop, DVWA)
+	docker compose --profile lab up -d
+
+docker-full: ## Start everything (Tengu + MSF + ZAP + labs)
+	docker compose --profile exploit --profile proxy --profile lab up -d
+
+docker-clean: ## Remove Docker images and volumes
+	docker compose down -v --rmi local
