@@ -3,8 +3,6 @@
 Generates professional penetration test reports in Markdown, HTML, and PDF formats.
 """
 
-from __future__ import annotations
-
 import json
 from datetime import datetime
 from pathlib import Path
@@ -115,8 +113,8 @@ async def generate_report(
     findings: list[dict] | None = None,
     executive_summary: str = "",
     conclusion: str = "",
-    report_type: ReportType = "full",
-    output_format: ReportFormat = "markdown",
+    report_type: Literal["full", "executive", "technical", "finding", "risk_matrix"] = "full",
+    output_format: Literal["markdown", "html", "pdf"] = "markdown",
     output_path: str = "",
     tools_used: list[str] | None = None,
 ) -> dict:

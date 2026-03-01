@@ -1,7 +1,5 @@
 """Nuclei vulnerability scanner tool wrapper."""
 
-from __future__ import annotations
-
 import json
 import time
 from typing import Literal
@@ -26,7 +24,7 @@ async def nuclei_scan(
     ctx: Context,
     target: str,
     templates: list[str] | None = None,
-    severity: list[Severity] | None = None,
+    severity: list[Literal["info", "low", "medium", "high", "critical"]] | None = None,
     tags: list[str] | None = None,
     exclude_tags: list[str] | None = None,
     rate_limit: int = 150,

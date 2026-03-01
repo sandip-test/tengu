@@ -1,7 +1,5 @@
 """FFUF directory/endpoint fuzzer tool wrapper."""
 
-from __future__ import annotations
-
 import json
 import re
 import time
@@ -27,7 +25,7 @@ async def ffuf_fuzz(
     ctx: Context,
     url: str,
     wordlist: str | None = None,
-    method: HTTPMethod = "GET",
+    method: Literal["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"] = "GET",
     filter_codes: list[int] | None = None,
     match_codes: list[int] | None = None,
     extensions: list[str] | None = None,

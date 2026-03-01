@@ -1,7 +1,5 @@
 """Hash identification and cracking tools."""
 
-from __future__ import annotations
-
 import contextlib
 import re
 from typing import Literal
@@ -104,7 +102,7 @@ async def hash_crack(
     hash_value: str,
     hash_type: str = "",
     wordlist: str | None = None,
-    tool_preference: HashcrackTool = "auto",
+    tool_preference: Literal["john", "hashcat", "auto"] = "auto",
     timeout: int | None = None,
 ) -> dict:
     """Attempt to crack a hash using a dictionary attack.
