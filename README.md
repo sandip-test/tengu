@@ -362,27 +362,213 @@ Tengu is built as a **force multiplier for human pentesters**, not an autonomous
 
 ## Practice Lab
 
-Set up isolated vulnerable targets for safe, legal testing:
+Set up isolated vulnerable targets for safe, legal testing. The recommended topology is:
 
-```bash
-# DVWA — classic web vulnerabilities
-docker run -d -p 80:80 vulnerables/web-dvwa
+- **Host machine** (Mac/Windows/Linux) — runs Docker with the vulnerable apps
+- **Kali Linux VM** — runs Tengu MCP server, has all pentesting tools installed
+- **Claude Code** — runs on the host, connects to Tengu via SSE over the LAN
 
-# OWASP Juice Shop — OWASP Top 10
-docker run -d -p 3000:3000 bkimminich/juice-shop
-
-# DVGA — GraphQL vulnerabilities
-docker run -d -p 5013:5013 dolevf/dvga
-
-# Metasploitable 2 — network services
-docker run -d -p 2121:21 -p 2222:22 -p 8180:8080 tleemcjr/metasploitable2
+```
+┌─────────────────────┐         LAN          ┌──────────────────────┐
+│  Host (Mac/Windows) │◄────────────────────►│  Kali Linux VM       │
+│                     │  Claude → SSE :8000  │                      │
+│  Docker containers  │                      │  Tengu MCP Server    │
+│  :3000  Juice Shop  │◄────────────────────►│  nmap, sqlmap,       │
+│  :80    DVWA        │  Tengu scans targets │  nuclei, hydra...    │
+│  :5013  DVGA        │                      │                      │
+└─────────────────────┘                      └──────────────────────┘
+         ▲
+         │ Claude Code (MCP client)
 ```
 
-Then allow them in `tengu.toml`:
+---
+
+### Step 1 — Get Kali Linux
+
+Download the **Kali Linux VM** image for your hypervisor:
+
+- **VirtualBox / VMware:** https://www.kali.org/get-kali/#kali-virtual-machines
+- **UTM (Apple Silicon):** https://www.kali.org/get-kali/#kali-arm
+
+Default credentials: `kali` / `kali`. Change the password on first login:
+
+```bash
+passwd
+```
+
+Update the system and install `git` and `uv`:
+
+```bash
+sudo apt update && sudo apt full-upgrade -y
+sudo apt install -y git curl
+
+# Install uv (Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.local/bin/env
+```
+
+---
+
+### Step 2 — Install Tengu on Kali
+
+```bash
+git clone https://github.com/rfunix/tengu.git ~/tengu
+cd ~/tengu
+
+# Install Python dependencies
+uv sync
+
+# Install all external pentesting tools (Kali/Debian)
+make install-tools
+
+# Verify tools are available
+make doctor
+```
+
+---
+
+### Step 3 — Configure Targets
+
+Edit `~/tengu/tengu.toml` to allow the IP range where your Docker containers will run.
+
+**If Docker runs on your host machine** (typical setup — find the host IP first):
+
+```bash
+# macOS
+ipconfig getifaddr en0      # e.g. 192.168.86.30
+
+# Linux / WSL
+ip -4 addr show | grep inet
+```
+
+Then set the subnet in `tengu.toml`:
+
+```toml
+[targets]
+allowed_hosts = ["192.168.86.0/24"]
+```
+
+**If Docker runs on the same Kali machine as Tengu:**
 
 ```toml
 [targets]
 allowed_hosts = ["127.0.0.1", "localhost"]
+```
+
+> Since Tengu 0.2.1, hosts explicitly listed in `allowed_hosts` are removed from the
+> built-in blocklist, so loopback targets are permitted when intentionally whitelisted.
+
+---
+
+### Step 4 — Start Tengu on Kali (SSE transport)
+
+Use `tmux` so the server keeps running after you close the SSH session:
+
+```bash
+# Create a persistent session
+tmux new -s tengu
+
+# Start the MCP server (SSE, accessible from the network)
+cd ~/tengu
+make run-sse
+# Equivalent: uv run tengu --transport sse --host 0.0.0.0
+# Server listens on: 0.0.0.0:8000
+```
+
+To reconnect to the session later: `tmux attach -t tengu`
+
+To restart the server without leaving tmux:
+```bash
+# From the host via SSH
+tmux send-keys -t tengu C-c ""
+tmux send-keys -t tengu "cd ~/tengu && make run-sse" Enter
+```
+
+---
+
+### Step 5 — Start the Vulnerable Containers
+
+Run these on your **host machine** (where Docker is installed):
+
+```bash
+# OWASP Juice Shop — OWASP Top 10 web vulnerabilities
+docker run -d -p 3000:3000 bkimminich/juice-shop
+
+# DVWA — classic web vulnerabilities (SQLi, XSS, CSRF, File Upload...)
+docker run -d -p 80:80 vulnerables/web-dvwa
+
+# DVGA — deliberately vulnerable GraphQL API
+docker run -d -p 5013:5013 dolevf/dvga
+
+# Metasploitable 2 — vulnerable network services
+docker run -d -p 2121:21 -p 2222:22 -p 8180:8080 tleemcjr/metasploitable2
+
+# Verify containers are running
+docker ps
+```
+
+---
+
+### Step 6 — Connect Claude Code to Tengu
+
+Add the Tengu server to Claude Code on your **host machine**.
+
+**Via CLI:**
+
+```bash
+claude mcp add --scope user tengu-kali --transport sse http://<kali-ip>:8000/sse
+```
+
+**Or manually** in `~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "tengu": {
+      "url": "http://<kali-ip>:8000/sse"
+    }
+  }
+}
+```
+
+Replace `<kali-ip>` with the Kali VM's IP (find it with `ip a` on Kali).
+
+Verify the connection inside Claude Code:
+
+```
+/mcp
+```
+
+---
+
+### Step 7 — Run the Pentest
+
+Open Claude Code and ask it to attack the containers. Tengu orchestrates all tools automatically:
+
+```
+Do a full pentest on http://192.168.86.30:3000
+```
+
+Claude will chain: `validate_target` → `whatweb` → `nmap` → `analyze_headers` →
+`nikto` → `nuclei` → `sqlmap` → `dalfox` → `graphql_security_check` →
+`correlate_findings` → `generate_report`
+
+**Real findings from a Juice Shop black-box assessment:**
+
+| Severity | Finding | Endpoint |
+|----------|---------|----------|
+| Critical (9.8) | SQL Injection — boolean + time-blind, SQLite | `/rest/products/search?q=` |
+| High (7.4) | Reflected XSS | `/rest/products/search?q=` |
+| High (6.5) | Security headers absent — Grade F (25/100) | `/` |
+| Medium (5.3) | CORS wildcard `Access-Control-Allow-Origin: *` | `/` |
+| Medium (5.3) | `/ftp/` directory publicly accessible | `/ftp/` |
+| Medium (6.1) | jQuery 2.2.4 — CVE-2019-11358, CVE-2020-11022 | `/` |
+| Low (3.1) | `X-Recruiting` header — information disclosure | `/` |
+
+Generate the final report in Markdown or HTML:
+
+```
+Generate a full HTML pentest report for the Juice Shop assessment
 ```
 
 ---
