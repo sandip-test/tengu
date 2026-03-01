@@ -31,7 +31,7 @@ _SEVERITY_WEIGHTS = {
 }
 
 
-def _normalize_finding(f: dict, index: int) -> dict:  # type: ignore[type-arg]
+def _normalize_finding(f: dict, index: int) -> dict:
     """Normalize a loose finding dict into a Finding-compatible dict.
 
     Accepts simplified formats from AI tool calls (e.g. url/parameter/remediation
@@ -112,14 +112,14 @@ async def generate_report(
     scope: list[str] | None = None,
     exclusions: list[str] | None = None,
     engagement_dates: str = "",
-    findings: list[dict] | None = None,  # type: ignore[type-arg]
+    findings: list[dict] | None = None,
     executive_summary: str = "",
     conclusion: str = "",
     report_type: ReportType = "full",
     output_format: ReportFormat = "markdown",
     output_path: str = "",
     tools_used: list[str] | None = None,
-) -> dict:  # type: ignore[type-arg]
+) -> dict:
     """Generate a professional penetration test report.
 
     Creates a comprehensive security assessment report from collected findings,
@@ -263,7 +263,7 @@ async def generate_report(
     }
 
 
-def _render_template(template_name: str, context: dict) -> str:  # type: ignore[type-arg]
+def _render_template(template_name: str, context: dict) -> str:
     """Render a Jinja2 template with the given context."""
     try:
         from jinja2 import Environment, FileSystemLoader, select_autoescape

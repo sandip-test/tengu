@@ -31,7 +31,7 @@ async def nuclei_scan(
     exclude_tags: list[str] | None = None,
     rate_limit: int = 150,
     timeout: int | None = None,
-) -> dict:  # type: ignore[type-arg]
+) -> dict:
     """Scan a target for vulnerabilities using Nuclei template engine.
 
     Nuclei uses YAML templates to detect vulnerabilities, misconfigurations,
@@ -154,7 +154,7 @@ async def nuclei_scan(
     }
 
 
-def _parse_nuclei_output(output: str) -> list[dict]:  # type: ignore[type-arg]
+def _parse_nuclei_output(output: str) -> list[dict]:
     """Parse Nuclei JSONL output into structured findings."""
     findings = []
 

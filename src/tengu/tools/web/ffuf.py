@@ -35,7 +35,7 @@ async def ffuf_fuzz(
     rate: int = 0,
     headers: dict[str, str] | None = None,
     timeout: int | None = None,
-) -> dict:  # type: ignore[type-arg]
+) -> dict:
     """Fuzz directories, files, and endpoints using FFUF.
 
     Uses a wordlist to discover hidden files, directories, APIs, and endpoints
@@ -169,7 +169,7 @@ async def ffuf_fuzz(
     }
 
 
-def _parse_ffuf_output(output: str) -> list[dict]:  # type: ignore[type-arg]
+def _parse_ffuf_output(output: str) -> list[dict]:
     """Parse FFUF JSON output."""
     results = []
 

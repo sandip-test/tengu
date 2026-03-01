@@ -39,7 +39,7 @@ async def dns_enumerate(
     domain: str,
     record_types: list[RecordType] | None = None,
     nameserver: str | None = None,
-) -> dict:  # type: ignore[type-arg]
+) -> dict:
     """Query DNS records for a domain.
 
     Performs DNS lookups for the specified record types using dnspython.

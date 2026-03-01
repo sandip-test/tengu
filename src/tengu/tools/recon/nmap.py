@@ -44,7 +44,7 @@ async def nmap_scan(
     os_detection: bool = False,
     scripts: str = "",
     timeout: int | None = None,
-) -> dict:  # type: ignore[type-arg]
+) -> dict:
     """Scan a target for open ports, services, and versions using Nmap.
 
     Args:
