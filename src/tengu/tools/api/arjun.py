@@ -22,7 +22,7 @@ _VALID_METHODS = {"GET", "POST", "JSON", "XML"}
 
 
 async def arjun_discover(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     url: str,
     method: str = "GET",
     wordlist: str = "",

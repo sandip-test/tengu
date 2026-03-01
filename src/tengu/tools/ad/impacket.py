@@ -33,7 +33,7 @@ _SPN_PATTERN = re.compile(r"ServicePrincipalName\s+(.+?)(?:\s{2,}|\t)")
 
 
 async def impacket_kerberoast(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     domain: str,
     username: str,

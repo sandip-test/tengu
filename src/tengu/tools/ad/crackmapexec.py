@@ -30,7 +30,7 @@ _MODULE_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
 
 async def nxc_enum(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     protocol: str = "smb",
     username: str = "",

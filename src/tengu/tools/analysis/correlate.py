@@ -55,7 +55,7 @@ _ATTACK_CHAINS: list[dict] = [
 
 
 async def correlate_findings(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     findings: list[dict],  # type: ignore[type-arg]
 ) -> dict:  # type: ignore[type-arg]
     """Correlate multiple findings to identify attack chains and compound risks.
@@ -237,7 +237,7 @@ def _build_remediation_priority(findings: list[dict]) -> list[dict]:  # type: ig
 
 
 async def score_risk(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     findings: list[dict],  # type: ignore[type-arg]
     context: str = "",
 ) -> dict:  # type: ignore[type-arg]

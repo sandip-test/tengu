@@ -23,7 +23,7 @@ _VALID_SCAN_TYPES = {"git", "filesystem", "github"}
 
 
 async def trufflehog_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     scan_type: str = "git",
     branch: str = "",

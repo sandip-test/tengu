@@ -22,7 +22,7 @@ _VALID_PROVIDERS = {"aws", "azure", "gcp", "alibaba"}
 
 
 async def scoutsuite_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     provider: str,
     profile: str = "",
     project: str = "",

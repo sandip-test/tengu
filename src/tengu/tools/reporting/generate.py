@@ -106,7 +106,7 @@ def _build_risk_matrix(findings: list[Finding]) -> RiskMatrix:
 
 
 async def generate_report(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     client_name: str,
     engagement_type: str = "blackbox",
     scope: list[str] | None = None,
@@ -149,9 +149,9 @@ async def generate_report(
 
     # Parse findings
     parsed_findings: list[Finding] = []
-    for f in findings or []:
+    for raw_f in findings or []:
         try:
-            normalized = _normalize_finding(f, len(parsed_findings) + 1)
+            normalized = _normalize_finding(raw_f, len(parsed_findings) + 1)
             parsed_findings.append(Finding(**normalized))
         except Exception as exc:
             logger.warning("Skipping invalid finding", error=str(exc))
@@ -189,9 +189,9 @@ async def generate_report(
 
     # Build OWASP distribution
     owasp_distribution: dict[str, int] = {}
-    for f in parsed_findings:
-        if f.owasp_category:
-            owasp_distribution[f.owasp_category] = owasp_distribution.get(f.owasp_category, 0) + 1
+    for finding in parsed_findings:
+        if finding.owasp_category:
+            owasp_distribution[finding.owasp_category] = owasp_distribution.get(finding.owasp_category, 0) + 1
 
     template_context = {
         "report": report,
@@ -221,7 +221,7 @@ async def generate_report(
 
     await ctx.report_progress(3, 5, f"Generating {output_format} output...")
 
-    final_content = markdown_content
+    final_content: str | bytes = markdown_content
 
     if output_format == "html":
         final_content = _markdown_to_html(markdown_content, client_name)
@@ -242,8 +242,8 @@ async def generate_report(
         path.parent.mkdir(parents=True, exist_ok=True)
         mode = "wb" if output_format == "pdf" else "w"
         encoding = None if output_format == "pdf" else "utf-8"
-        with path.open(mode, encoding=encoding) as f:
-            f.write(final_content)  # type: ignore[arg-type]
+        with path.open(mode, encoding=encoding) as fh:
+            fh.write(final_content)
         saved_path = str(path.resolve())
 
     await ctx.report_progress(5, 5, "Report complete")
@@ -291,7 +291,7 @@ def _render_template(template_name: str, context: dict) -> str:  # type: ignore[
 def _markdown_to_html(markdown: str, title: str = "Pentest Report") -> str:
     """Convert Markdown to styled HTML."""
     try:
-        import markdown as md  # type: ignore[import]
+        import markdown as md  # type: ignore[import-untyped]
 
         html_body = md.markdown(
             markdown,
@@ -362,7 +362,7 @@ def _markdown_to_html(markdown: str, title: str = "Pentest Report") -> str:
 def _html_to_pdf(html: str) -> bytes:
     """Convert HTML to PDF using WeasyPrint."""
     try:
-        from weasyprint import HTML  # type: ignore[import]
+        from weasyprint import HTML
 
         return HTML(string=html).write_pdf()
     except ImportError as exc:

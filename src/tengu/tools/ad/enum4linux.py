@@ -21,7 +21,7 @@ logger = structlog.get_logger(__name__)
 
 
 async def enum4linux_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     username: str = "",
     password: str = "",

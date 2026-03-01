@@ -47,7 +47,7 @@ _SUPPORTED_SERVICES = {
 
 
 async def hydra_attack(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     service: str,
     userlist: str,

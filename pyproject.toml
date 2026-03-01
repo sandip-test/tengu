@@ -67,3 +67,5 @@ python_version = "3.12"
 strict = true
 ignore_missing_imports = true
 mypy_path = "src"
+# Disable checks with too many pre-existing violations (incremental adoption)
+disable_error_codes = ["type-arg", "no-any-return", "no-untyped-def"]

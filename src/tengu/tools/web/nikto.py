@@ -21,7 +21,7 @@ logger = structlog.get_logger(__name__)
 
 
 async def nikto_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     tuning: str = "x6",
     ssl: bool = False,

@@ -9,7 +9,7 @@ from tengu.security.sanitizer import sanitize_cve_id, sanitize_free_text
 
 
 async def cve_lookup(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     cve_id: str,
 ) -> dict:  # type: ignore[type-arg]
     """Fetch complete details for a specific CVE from NVD and CVE.org.
@@ -61,7 +61,7 @@ async def cve_lookup(
 
 
 async def cve_search(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     keyword: str | None = None,
     cpe_name: str | None = None,
     severity: str | None = None,

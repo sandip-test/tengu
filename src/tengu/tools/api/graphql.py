@@ -36,7 +36,7 @@ _BATCH_QUERIES = [
 
 
 async def graphql_security_check(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     url: str,
     check_introspection: bool = True,
     authenticated: bool = False,

@@ -44,7 +44,7 @@ def _sanitize_docker_image(value: str) -> str:
 
 
 async def trivy_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     scan_type: str = "image",
     severity: str = "HIGH,CRITICAL",
@@ -225,7 +225,7 @@ def _parse_trivy_output(output: str) -> dict:  # type: ignore[type-arg]
                 "references": (vuln.get("References", []) or [])[:3],
             }
 
-            result_entry["vulnerabilities"].append(structured_vuln)  # type: ignore[union-attr]
+            result_entry["vulnerabilities"].append(structured_vuln)  # type: ignore[attr-defined]
             all_vulns.append(structured_vuln)
 
         structured_results.append(result_entry)

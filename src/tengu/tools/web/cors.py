@@ -23,7 +23,7 @@ _TEST_ORIGINS = [
 
 
 async def test_cors(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     url: str,
     custom_origins: list[str] | None = None,
     timeout_seconds: int = 30,

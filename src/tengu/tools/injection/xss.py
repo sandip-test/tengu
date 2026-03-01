@@ -20,7 +20,7 @@ logger = structlog.get_logger(__name__)
 
 
 async def xss_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     url: str,
     parameter: str = "",
     cookie: str = "",

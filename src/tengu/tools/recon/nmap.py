@@ -36,7 +36,7 @@ _TIMING_FLAGS = {"T0", "T1", "T2", "T3", "T4", "T5"}
 
 
 async def nmap_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     ports: str = "1-1024",
     scan_type: ScanType = "connect",

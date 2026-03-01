@@ -80,7 +80,7 @@ _INFORMATION_DISCLOSURE_HEADERS = [
 
 
 async def analyze_headers(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     url: str,
     follow_redirects: bool = True,
     timeout_seconds: int = 30,

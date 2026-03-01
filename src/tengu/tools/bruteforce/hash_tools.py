@@ -44,7 +44,7 @@ HashcrackTool = Literal["john", "hashcat", "auto"]
 
 
 async def hash_identify(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     hash_value: str,
 ) -> dict:  # type: ignore[type-arg]
     """Identify the algorithm used to produce a hash value.
@@ -83,7 +83,7 @@ async def hash_identify(
     }
 
     for match in matches:
-        mode = hashcat_modes.get(match["type"])
+        mode = hashcat_modes.get(str(match["type"]))
         if mode is not None:
             match["hashcat_mode"] = mode
 
@@ -100,7 +100,7 @@ async def hash_identify(
 
 
 async def hash_crack(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     hash_value: str,
     hash_type: str = "",
     wordlist: str | None = None,

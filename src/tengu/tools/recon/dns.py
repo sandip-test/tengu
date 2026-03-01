@@ -35,7 +35,7 @@ _ALL_RECORD_TYPES: list[RecordType] = [
 
 
 async def dns_enumerate(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     domain: str,
     record_types: list[RecordType] | None = None,
     nameserver: str | None = None,
@@ -71,7 +71,7 @@ async def dns_enumerate(
 
     # Validate record type names
     valid_types = set(_ALL_RECORD_TYPES)
-    types_to_query = [t.upper() for t in types_to_query if t.upper() in valid_types]
+    types_to_query = [t.upper() for t in types_to_query if t.upper() in valid_types]  # type: ignore[misc]
 
     resolver = dns.asyncresolver.Resolver()
     if nameserver:

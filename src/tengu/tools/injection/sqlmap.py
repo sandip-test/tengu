@@ -24,7 +24,7 @@ logger = structlog.get_logger(__name__)
 
 
 async def sqlmap_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     url: str,
     method: str = "GET",
     data: str = "",

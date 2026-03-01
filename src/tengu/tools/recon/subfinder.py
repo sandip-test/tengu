@@ -19,7 +19,7 @@ logger = structlog.get_logger(__name__)
 
 
 async def subfinder_enum(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     domain: str,
     sources: list[str] | None = None,
     timeout: int | None = None,

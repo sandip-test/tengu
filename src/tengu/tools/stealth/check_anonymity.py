@@ -49,7 +49,7 @@ async def check_anonymity() -> dict:
         try:
             result = socket.getaddrinfo(host, None)
             if result:
-                dns_servers.append(result[0][4][0])
+                dns_servers.append(str(result[0][4][0]))
         except Exception:
             pass
 

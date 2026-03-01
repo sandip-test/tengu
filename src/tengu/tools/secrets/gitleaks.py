@@ -22,7 +22,7 @@ _VALID_REPORT_FORMATS = {"json", "csv", "sarif"}
 
 
 async def gitleaks_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     scan_type: str = "detect",
     report_format: str = "json",

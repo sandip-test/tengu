@@ -21,7 +21,7 @@ logger = structlog.get_logger(__name__)
 
 
 async def masscan_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     ports: str = "1-1024",
     rate: int = 1000,
@@ -121,7 +121,7 @@ async def masscan_scan(
 
 def _parse_masscan_json(output: str) -> list[dict[str, object]]:
     """Parse masscan JSON output."""
-    results = []
+    results: list[dict[str, object]] = []
     output = output.strip()
 
     if not output:

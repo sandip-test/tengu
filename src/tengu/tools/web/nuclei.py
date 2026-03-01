@@ -23,7 +23,7 @@ Severity = Literal["info", "low", "medium", "high", "critical"]
 
 
 async def nuclei_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     target: str,
     templates: list[str] | None = None,
     severity: list[Severity] | None = None,
@@ -64,7 +64,7 @@ async def nuclei_scan(
     target = sanitize_url(target)
 
     effective_severity = severity or cfg.tools.defaults.nuclei_severity
-    effective_severity = sanitize_severity(effective_severity)
+    effective_severity = sanitize_severity(effective_severity)  # type: ignore[arg-type]
 
     allowlist = make_allowlist_from_config()
     try:

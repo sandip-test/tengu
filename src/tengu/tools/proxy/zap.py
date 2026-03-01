@@ -54,7 +54,7 @@ async def _zap_request(
 
 
 async def zap_spider(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     url: str,
     max_depth: int = 5,
     wait_for_completion: bool = True,
@@ -155,7 +155,7 @@ async def zap_spider(
 
 
 async def zap_active_scan(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     url: str,
     policy: str = "",
     timeout: int | None = None,
@@ -240,7 +240,7 @@ async def zap_active_scan(
 
 
 async def zap_get_alerts(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     url: str | None = None,
     risk_level: str | None = None,
     max_alerts: int = 100,

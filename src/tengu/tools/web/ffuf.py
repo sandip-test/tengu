@@ -24,7 +24,7 @@ HTTPMethod = Literal["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"]
 
 
 async def ffuf_fuzz(
-    ctx: Context,  # type: ignore[type-arg]
+    ctx: Context,
     url: str,
     wordlist: str | None = None,
     method: HTTPMethod = "GET",
