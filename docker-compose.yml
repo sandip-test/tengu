@@ -46,12 +46,7 @@ services:
       - exploit
     environment:
       - MSF_RPC_PASSWORD=${MSF_RPC_PASSWORD:-tengu}
-    command: >
-      bash -c "
-        gem install metasploit-framework --no-document 2>/dev/null || true;
-        msfdb init &&
-        msfrpcd -P ${MSF_RPC_PASSWORD:-tengu} -S -f -a 0.0.0.0
-      "
+    command: bash -c "/usr/src/metasploit-framework/msfrpcd -P $$MSF_RPC_PASSWORD -S -f -a 0.0.0.0"
     restart: unless-stopped
     networks:
       tengu-net:
@@ -93,6 +88,55 @@ services:
       tengu-net:
         aliases:
           - dvwa
+
+  # ── Vulnerable FTP Server (profile: lab) ─────────────────────────────────────
+  vulnerable-ftp:
+    image: tengu-lab:vulnerable-ftp
+    profiles:
+      - lab
+    restart: unless-stopped
+    networks:
+      tengu-net:
+        aliases:
+          - vulnerable-ftp
+
+  # ── Tengu Autonomous Agent (profile: agent) ──────────────────────────────────
+  tengu-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TENGU_TIER: ${TENGU_TIER:-core}
+    image: tengu:${TENGU_TIER:-core}
+    profiles:
+      - agent
+    entrypoint: ["/entrypoint-agent.sh"]
+    volumes:
+      - tengu-output:/app/output
+      - tengu-logs:/app/logs
+    env_file:
+      - path: .env
+        required: true    # .env must exist — needs ANTHROPIC_API_KEY
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - TENGU_AGENT_TARGET=${TENGU_AGENT_TARGET:-}
+      - TENGU_AGENT_SCOPE=${TENGU_AGENT_SCOPE:-}
+      - TENGU_AGENT_TYPE=${TENGU_AGENT_TYPE:-blackbox}
+      - TENGU_AGENT_MAX_ITER=${TENGU_AGENT_MAX_ITER:-50}
+      - TENGU_ALLOWED_HOSTS=${TENGU_ALLOWED_HOSTS:-}
+      - TENGU_LOG_LEVEL=${TENGU_LOG_LEVEL:-INFO}
+      - TENGU_CONFIG_PATH=/app/tengu.toml
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges
+    stdin_open: true    # Required for human-in-the-loop approval prompts
+    tty: true           # Required for human-in-the-loop approval prompts
+    networks:
+      tengu-net:
+        aliases:
+          - tengu-agent
 
 networks:
   tengu-net:

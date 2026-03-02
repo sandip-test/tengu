@@ -1,11 +1,9 @@
 .PHONY: help install install-dev install-tools setup lint format typecheck
 .PHONY: test test-unit test-security test-integration test-all coverage
 .PHONY: run run-sse run-dev inspect clean doctor
-.PHONY: install-tools-osint install-tools-secrets install-tools-container
-.PHONY: install-tools-cloud install-tools-api install-tools-ad
-.PHONY: install-tools-wireless install-tools-stealth
 .PHONY: docker-build docker-up docker-down docker-logs docker-shell
-.PHONY: docker-lab docker-full docker-clean
+.PHONY: docker-lab docker-full docker-pentest docker-agent docker-clean
+.PHONY: docker-rebuild docker-rebuild-tengu
 
 # ============================================================
 # CONFIGURATION
@@ -27,39 +25,9 @@ install: ## Install project dependencies
 install-dev: ## Install dev dependencies (tests, lint, types)
 	uv sync --extra dev
 
-install-tools: ## Install external pentesting tools
+install-tools: ## Install external pentesting tools (use scripts/install-tools.sh --<category> for selective install)
 	chmod +x scripts/install-tools.sh
 	./scripts/install-tools.sh --all
-
-install-tools-recon: ## Install recon tools only
-	./scripts/install-tools.sh --recon
-
-install-tools-web: ## Install web scanning tools only
-	./scripts/install-tools.sh --web
-
-install-tools-osint: ## Install OSINT tools (theHarvester, whatweb)
-	./scripts/install-tools.sh --osint
-
-install-tools-secrets: ## Install secret scanning tools (trufflehog, gitleaks)
-	./scripts/install-tools.sh --secrets
-
-install-tools-container: ## Install container security tools (trivy)
-	./scripts/install-tools.sh --container
-
-install-tools-cloud: ## Install cloud security tools (scoutsuite, checkov)
-	./scripts/install-tools.sh --cloud
-
-install-tools-api: ## Install API security tools (arjun)
-	./scripts/install-tools.sh --api
-
-install-tools-ad: ## Install Active Directory tools (enum4linux-ng, nxc, impacket)
-	./scripts/install-tools.sh --ad
-
-install-tools-wireless: ## Install wireless tools (aircrack-ng)
-	./scripts/install-tools.sh --wireless
-
-install-tools-stealth: ## Install stealth/OPSEC tools (tor, torsocks, proxychains4, socat)
-	./scripts/install-tools.sh --stealth
 
 setup: install-dev ## Full setup (Python)
 	@echo "Tengu setup complete! Run 'make install-tools' to install pentesting tools."
@@ -154,5 +122,19 @@ docker-lab: ## Start Tengu + lab targets (Juice Shop, DVWA)
 docker-full: ## Start everything (Tengu + MSF + ZAP + labs)
 	docker compose --profile exploit --profile proxy --profile lab up -d
 
+docker-pentest: ## Start Tengu + MSF + ZAP for real-world pentests (no lab targets)
+	docker compose --profile exploit --profile proxy up -d
+
+docker-agent: ## Run autonomous agent (requires .env with ANTHROPIC_API_KEY and TENGU_AGENT_TARGET)
+	docker compose --profile agent run --rm tengu-agent
+
 docker-clean: ## Remove Docker images and volumes
 	docker compose down -v --rmi local
+
+# ── Rebuild targets ──────────────────────────────────────────────────────────
+
+docker-rebuild: ## Full no-cache rebuild (use after Dockerfile or dep changes)
+	docker compose build --no-cache --build-arg TENGU_TIER=$(TENGU_TIER)
+
+docker-rebuild-tengu: ## Rebuild only the tengu service (fast, after src/ changes)
+	docker compose build --no-cache tengu
