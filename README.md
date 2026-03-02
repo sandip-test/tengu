@@ -177,13 +177,15 @@ cp .env.example .env
 **Lab targets (Juice Shop, DVWA, vulnerable-ftp):**
 
 ```bash
-make docker-agent-lab
+make docker-lab
+make docker-agent
 ```
 
 **Real-world pentests (Tengu + MSF + ZAP, no lab containers):**
 
 ```bash
-make docker-agent-pentest
+make docker-pentest
+make docker-agent
 ```
 
 **Without Docker:**
@@ -192,13 +194,6 @@ make docker-agent-pentest
 uv sync --extra agent
 python autonomous_tengu.py 192.168.1.100 --scope 192.168.1.0/24 --type blackbox
 ```
-
-### Agent Docker Profiles
-
-| Command | What it starts |
-|---------|----------------|
-| `make docker-agent-lab` | Agent + Juice Shop, DVWA, vulnerable-ftp |
-| `make docker-agent-pentest` | Agent + Metasploit + ZAP (real targets) |
 
 ### How It Works
 

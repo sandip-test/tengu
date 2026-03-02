@@ -66,9 +66,10 @@ uv sync --all-extras
 # Install all supported external tools
 make install-tools
 
-# Or install by category
-make install-tools-recon    # nmap, masscan, subfinder
-make install-tools-web      # nuclei, nikto, ffuf, sslyze
+# Selective install by category (use the script directly):
+./scripts/install-tools.sh --recon   # nmap, masscan, subfinder
+./scripts/install-tools.sh --web     # nuclei, nikto, ffuf, sslyze
+# Run ./scripts/install-tools.sh --help for all options
 ```
 
 ### 4. Configure Tengu
