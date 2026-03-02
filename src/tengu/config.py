@@ -63,6 +63,7 @@ class ToolPathsConfig(BaseModel):
     hashcat: str = ""
     searchsploit: str = ""
     metasploit_rpc: str = "https://127.0.0.1:55553"
+    setoolkit: str = ""
 
 
 class ToolDefaultsConfig(BaseModel):
