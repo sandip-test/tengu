@@ -102,9 +102,9 @@ class TestToolsRegistered:
         """sqlmap_scan injection tool is registered."""
         assert "sqlmap_scan" in _REGISTERED_TOOL_NAMES
 
-    def test_at_least_50_tools_registered(self):
-        """At least 50 tools are registered (v0.2.1 has 56+)."""
-        assert len(_REGISTERED_TOOL_NAMES) >= 50
+    def test_at_least_60_tools_registered(self):
+        """At least 60 tools are registered (v0.2.2 has 66)."""
+        assert len(_REGISTERED_TOOL_NAMES) >= 60
 
 
 # ---------------------------------------------------------------------------
@@ -137,9 +137,9 @@ class TestPromptsRegistered:
         """crack_wifi quick action prompt is registered (v0.2.1)."""
         assert "crack_wifi" in _REGISTERED_PROMPT_NAMES
 
-    def test_at_least_20_prompts_registered(self):
-        """At least 20 prompts are registered (v0.2.1 has 34)."""
-        assert len(_REGISTERED_PROMPT_NAMES) >= 20
+    def test_at_least_30_prompts_registered(self):
+        """At least 30 prompts are registered (v0.2.2 has 35)."""
+        assert len(_REGISTERED_PROMPT_NAMES) >= 30
 
     def test_msf_exploit_workflow_prompt_registered(self):
         """msf_exploit_workflow prompt is registered."""

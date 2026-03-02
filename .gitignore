@@ -76,3 +76,6 @@ tengu.toml.local
 
 # Node (MCP Inspector)
 node_modules/
+
+# Claude Code local config
+.claude/

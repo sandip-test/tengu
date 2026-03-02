@@ -1,6 +1,6 @@
 # API Reference
 
-Complete reference for all 57 tools, 19 resources, and 34 prompts in Tengu.
+Complete reference for all 66 tools, 20 resources, and 35 prompts in Tengu.
 
 All tools require the target to be in the `[targets].allowed_hosts` allowlist
 configured in `tengu.toml`, unless explicitly noted otherwise.
