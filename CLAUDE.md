@@ -20,9 +20,9 @@ pentesting tools to AI assistants through a clean, secure interface.
 | Entry point     | `src/tengu/server.py` → `FastMCP("Tengu")`        |
 | Config file     | `tengu.toml` at project root                      |
 | Test suite      | 1931+ tests, 0 lint errors |
-| Tools           | 66 MCP tools                                      |
+| Tools           | 63 MCP tools                                      |
 | Resources       | 20 MCP resources                                  |
-| Prompts         | 35 MCP prompts                                    |
+| Prompts         | 34 MCP prompts                                    |
 
 ---
 
@@ -145,12 +145,17 @@ src/tengu/
     ├── vuln_assessment.py  # assess_injection, assess_access_control, assess_crypto, assess_misconfig
     ├── report_prompts.py   # executive_report, technical_report, full_pentest_report,
     │                       # remediation_plan, finding_detail, risk_matrix, retest_report
-    ├── advanced_workflows.py # osint_investigation, stealth_assessment, opsec_checklist,
-    │                         # api_security_assessment, ad_assessment, container_assessment,
-    │                         # cloud_assessment, bug_bounty_workflow, compliance_assessment,
-    │                         # wireless_assessment
+    ├── osint_workflow.py   # osint_investigation
+    ├── stealth_prompts.py  # stealth_assessment, opsec_checklist
+    ├── api_assessment.py   # api_security_assessment
+    ├── ad_assessment.py    # ad_assessment
+    ├── container_assessment.py # container_assessment
+    ├── bug_bounty.py       # bug_bounty_workflow
+    ├── compliance_assessment.py # compliance_assessment
+    ├── wireless_assessment.py   # wireless_assessment
     ├── quick_actions.py    # crack_wifi, explore_url, go_stealth, find_secrets,
-    │                       # map_network, hunt_subdomains, find_vulns, pwn_target
+    │                       # map_network, hunt_subdomains, find_vulns, pwn_target,
+    │                       # msf_exploit_workflow
     └── social_engineering.py # social_engineering_assessment
 ```
 
@@ -170,7 +175,9 @@ enabled = true
 
 [stealth.proxy]
 enabled = true
-url = "socks5h://127.0.0.1:9050"   # Tor SOCKS5 proxy
+type = "socks5h"
+host = "127.0.0.1"
+port = 9050
 ```
 
 ### What the Stealth Layer Does

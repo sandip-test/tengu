@@ -13,14 +13,14 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="Python"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-compatible-green.svg" alt="MCP"></a>
-  <img src="https://img.shields.io/badge/tools-66-orange.svg" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-63-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/version-0.2.1-brightgreen.svg" alt="Version">
   <img src="https://img.shields.io/badge/agent-LangGraph-purple.svg" alt="Agent">
 </p>
 
 ---
 
-**Tengu** is an MCP server that turns Claude into a penetration testing copilot. It orchestrates 66 security tools — from Nmap to Metasploit — with built-in safety controls, audit logging, and professional reporting.
+**Tengu** is an MCP server that turns Claude into a penetration testing copilot. It orchestrates 63 security tools — from Nmap to Metasploit — with built-in safety controls, audit logging, and professional reporting.
 
 - **What is it?** An MCP server that connects Claude to industry-standard pentest tools
 - **Why use it?** Automates recon and scanning while keeping the human in control of exploits
@@ -28,11 +28,11 @@
 
 ### Key Features
 
-- **66 Tools** — Nmap, Metasploit, SQLMap, Nuclei, Hydra, Burp-compatible ZAP, and more
+- **63 Tools** — Nmap, Metasploit, SQLMap, Nuclei, Hydra, Burp-compatible ZAP, and more
 - **AI-Orchestrated** — Claude decides the next tool based on previous findings
 - **Safety First** — Allowlist, rate limiting, audit logs, and human-in-the-loop for destructive actions
 - **Auto Reports** — Correlate findings and generate professional pentest reports (MD/HTML/PDF)
-- **35 Workflows** — Pre-built prompts for full pentest, web app, AD, cloud, and more
+- **34 Workflows** — Pre-built prompts for full pentest, web app, AD, cloud, and more
 - **20 Resources** — Built-in OWASP Top 10, MITRE ATT&CK, PTES, and pentest checklists
 - **Stealth Layer** — Optional Tor/SOCKS5 proxy routing, UA rotation, and timing jitter
 
@@ -98,7 +98,7 @@ TENGU_TIER=core    make docker-build   # default
 TENGU_TIER=full    make docker-build   # everything
 ```
 
-> **All tiers include all 35 prompts and 20 resources** — only the binary tools differ.
+> **All tiers include all 34 prompts and 20 resources** — only the binary tools differ.
 
 <details>
 <summary>Manual Install (without Docker)</summary>
@@ -148,7 +148,9 @@ enabled = false  # Route traffic through Tor/proxy
 
 [stealth.proxy]
 enabled = false
-url = "socks5h://127.0.0.1:9050"
+type = "socks5h"
+host = "127.0.0.1"
+port = 9050
 
 [osint]
 shodan_api_key = ""  # Required for shodan_lookup
@@ -217,8 +219,8 @@ START → initializer → strategist ─┬─→ executor → analyst ─┬─
 
 ## Tool Catalog
 
-> `minimal` (17 tools, ~480MB) · `core` (47 tools, ~7GB, default) · `full` (66 tools, ~8GB)
-> Build with: `TENGU_TIER=<tier> make docker-build`. All tiers include all 35 prompts and 20 resources.
+> `minimal` (17 tools, ~480MB) · `core` (47 tools, ~7GB, default) · `full` (63 tools, ~8GB)
+> Build with: `TENGU_TIER=<tier> make docker-build`. All tiers include all 34 prompts and 20 resources.
 
 | Category | Tools | Count |
 |----------|-------|-------|
@@ -228,7 +230,8 @@ START → initializer → strategist ─┬─→ executor → analyst ─┬─
 | DNS | DNS Enumerate, DNSRecon, Subjack, WHOIS | 4 |
 | Injection Testing | SQLMap, Dalfox (XSS), GraphQL Security Check | 3 |
 | Brute Force | Hydra, John the Ripper, Hashcat, CeWL | 4 |
-| Exploitation | Metasploit (search, info, run, sessions), SearchSploit | 5 |
+| Exploitation | Metasploit (search, info, run, sessions, cmd), SearchSploit | 6 |
+| Social Engineering | SET credential harvester, QR code attack, payload generator | 3 |
 | OSINT | theHarvester, Shodan, WHOIS | 3 |
 | Secrets & Code | TruffleHog, Gitleaks | 2 |
 | Container & Cloud | Trivy, Checkov, ScoutSuite | 3 |
@@ -240,7 +243,7 @@ START → initializer → strategist ─┬─→ executor → analyst ─┬─
 | Utility | Tool checker, target validator | 2 |
 
 <details>
-<summary>Full tool list (66 tools)</summary>
+<summary>Full tool list (63 tools)</summary>
 
 ### Reconnaissance
 | Tool | Description |
@@ -293,6 +296,13 @@ START → initializer → strategist ─┬─→ executor → analyst ─┬─
 | `msf_sessions_list` | List active Metasploit sessions |
 | `msf_session_cmd` | Execute a command on an active session (shell/Meterpreter) |
 | `searchsploit_query` | Search Exploit-DB offline database |
+
+### Social Engineering
+| Tool | Description |
+|------|-------------|
+| `set_credential_harvester` | Clone a website and capture submitted credentials (authorized phishing simulations) |
+| `set_qrcode_attack` | Generate QR code pointing to a URL for physical social engineering assessments |
+| `set_payload_generator` | Generate social engineering payloads (PowerShell, HTA) for authorized campaigns |
 
 ### Brute Force
 | Tool | Description |
@@ -378,11 +388,12 @@ Pre-built workflow templates that guide Claude through complete engagements.
 | **Reports** | `executive_report`, `technical_report`, `full_pentest_report`, `finding_detail`, `risk_matrix`, `remediation_plan`, `retest_report` |
 | **Stealth/OPSEC** | `stealth_assessment`, `opsec_checklist` |
 | **Specialized** | `ad_assessment`, `api_security_assessment`, `container_assessment`, `cloud_assessment`, `wireless_assessment`, `bug_bounty_workflow`, `compliance_assessment` |
-| **Quick actions** | `explore_url`, `map_network`, `hunt_subdomains`, `find_vulns`, `find_secrets`, `go_stealth`, `crack_wifi`, `pwn_target` |
+| **Quick actions** | `explore_url`, `map_network`, `hunt_subdomains`, `find_vulns`, `find_secrets`, `go_stealth`, `crack_wifi`, `pwn_target`, `msf_exploit_workflow` |
+| **Social Engineering** | `social_engineering_assessment` |
 
 ---
 
-## Built-in Resources (19)
+## Built-in Resources (20)
 
 Static reference data loaded by Claude during engagements.
 
@@ -400,8 +411,13 @@ Static reference data loaded by Claude during engagements.
 | `mitre://attack/tactics` | MITRE ATT&CK Enterprise tactics + techniques |
 | `mitre://attack/technique/{T1xxx}` | Technique detail by ID |
 | `creds://defaults/{product}` | Default credentials database |
+| `payloads://{type}` | Curated payload lists by type (xss, sqli, lfi, ssti, etc.) |
+| `stealth://techniques` | Reference guide for operational security techniques |
+| `stealth://proxy-guide` | Step-by-step proxy and Tor configuration guide |
 | `tools://catalog` | Live tool availability status |
 | `tools://{tool}/usage` | Usage guide for nmap, nuclei, sqlmap, metasploit, trivy, amass |
+| `prompts://list` | List of all available prompts with descriptions |
+| `prompts://category/{category}` | Prompts filtered by category |
 
 ---
 

@@ -10,9 +10,9 @@ Tengu implements three MCP primitives:
 
 | Primitive | Count | Purpose |
 |-----------|-------|---------|
-| Tools     | 66    | Active operations: scanning, exploitation, analysis, stealth |
+| Tools     | 63    | Active operations: scanning, exploitation, analysis, stealth |
 | Resources | 20    | Read-only reference data: OWASP, PTES, MITRE ATT&CK, checklists, payloads |
-| Prompts   | 35    | Guided workflow templates for complex engagements |
+| Prompts   | 34    | Guided workflow templates for complex engagements |
 
 ---
 
@@ -123,7 +123,7 @@ graph TD
 
 ## Tool Categories and Coverage
 
-66 tools across 18 categories as of v0.2.2.
+63 tools across 19 categories as of v0.3.0.
 
 ```mermaid
 graph LR
@@ -162,12 +162,19 @@ graph LR
         XSS["xss_scan"]
     end
 
-    subgraph EXP["Exploitation (5)"]
+    subgraph EXP["Exploitation (6)"]
         MSS["msf_search"]
         MSI["msf_module_info"]
         MSR["msf_run_module"]
         MSSL["msf_sessions_list"]
+        MSSC["msf_session_cmd"]
         SEX["searchsploit_query"]
+    end
+
+    subgraph SOC["Social Engineering (3)"]
+        SCH["set_credential_harvester"]
+        SQR["set_qrcode_attack"]
+        SPG["set_payload_generator"]
     end
 
     subgraph BRF["Bruteforce (4)"]
@@ -365,7 +372,7 @@ implementation without changing any tool code.
 
 | Module | Description |
 |--------|-------------|
-| `server.py` | FastMCP server instance. Imports and registers all 66 tools, 20 resources, and 35 prompts. Contains the `main()` entry point. |
+| `server.py` | FastMCP server instance. Imports and registers all 63 tools, 20 resources, and 34 prompts. Contains the `main()` entry point. |
 | `config.py` | Loads `tengu.toml` with `tomllib`, applies env var overrides, returns a `TenguConfig` singleton. Contains default blocked hosts list. |
 | `types.py` | All shared Pydantic v2 models: network scan models (`Host`, `Port`, `ScanResult`), web models (`SecurityHeader`, `CORSResult`, `SSLResult`), finding models (`Finding`, `Evidence`), report models (`PentestReport`, `RiskMatrix`), CVE models (`CVERecord`, `CVSSMetrics`), tool status models (`ToolStatus`, `ToolsCheckResult`). |
 | `exceptions.py` | Custom exception hierarchy rooted at `TenguError`. Each exception carries structured data (tool name, target, returncode, etc.) for programmatic handling. |
@@ -401,5 +408,13 @@ implementation without changing any tool code.
 | `prompts/pentest_workflow.py` | Workflow prompts: `full_pentest` (7 PTES phases), `quick_recon` (7-step fast recon), `web_app_assessment` (OWASP OTG). |
 | `prompts/vuln_assessment.py` | Focused assessment prompts: injection, access control, cryptography, misconfiguration. |
 | `prompts/report_prompts.py` | Report prompts: executive, technical, full, remediation plan, finding detail, risk matrix, retest. |
-| `prompts/advanced_workflows.py` | Advanced prompts added in v0.2.0: osint_investigation, stealth_assessment, opsec_checklist, api_security_assessment, ad_assessment, container_assessment, cloud_assessment, bug_bounty_workflow, compliance_assessment, wireless_assessment. |
-| `prompts/quick_actions.py` | Quick action prompts added in v0.2.1: crack_wifi, explore_url, go_stealth, find_secrets, map_network, hunt_subdomains, find_vulns, pwn_target. |
+| `prompts/osint_workflow.py` | `osint_investigation` — structured OSINT gathering workflow. |
+| `prompts/stealth_prompts.py` | `stealth_assessment`, `opsec_checklist` — stealth and OPSEC engagement prompts. |
+| `prompts/api_assessment.py` | `api_security_assessment` — OWASP API Security Top 10 assessment workflow. |
+| `prompts/ad_assessment.py` | `ad_assessment` — Active Directory enumeration and attack path workflow. |
+| `prompts/container_assessment.py` | `container_assessment` — container image and runtime security assessment. |
+| `prompts/bug_bounty.py` | `bug_bounty_workflow` — scope-aware bug bounty hunting workflow. |
+| `prompts/compliance_assessment.py` | `compliance_assessment` — compliance-mapped assessment (PCI-DSS, ISO 27001, NIST). |
+| `prompts/wireless_assessment.py` | `wireless_assessment` — Wi-Fi reconnaissance, capture, and cracking workflow. |
+| `prompts/quick_actions.py` | Quick action prompts added in v0.2.1: crack_wifi, explore_url, go_stealth, find_secrets, map_network, hunt_subdomains, find_vulns, pwn_target, msf_exploit_workflow. |
+| `prompts/social_engineering.py` | `social_engineering_assessment` — social engineering assessment workflow added in v0.3.0. |
