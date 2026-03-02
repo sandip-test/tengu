@@ -9,12 +9,6 @@
 </p>
 
 <p align="center">
-  <a href="https://asciinema.org/a/ZdvkN5ZHOynmfjTO">
-    <img src="https://asciinema.org/a/ZdvkN5ZHOynmfjTO.svg" alt="Tengu demo" width="800"/>
-  </a>
-</p>
-
-<p align="center">
   <a href="https://github.com/rfunix/tengu/actions/workflows/ci.yml"><img src="https://github.com/rfunix/tengu/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="Python"></a>
@@ -44,61 +38,22 @@
 
 ---
 
-## Autonomous Agent Mode
+## MCP Server Mode (Copilot)
 
-> **New:** Run a fully autonomous pentest without manual tool invocation. The agent
-> uses Claude as its strategic brain and Tengu as its execution toolset, following
-> the PTES methodology from recon through reporting.
+Use Claude as an interactive pentest copilot — you direct the engagement, Claude picks the right tools and chains them together automatically.
 
-```
-START → initializer → strategist ─┬─→ executor → analyst ─┬─→ strategist (loop)
-                                   │                        └─→ reporter → END
-                                   ├─→ human_gate → executor
-                                   └─→ reporter → END
-```
+<p align="center">
+  <a href="https://asciinema.org/a/ZdvkN5ZHOynmfjTO">
+    <img src="https://asciinema.org/a/ZdvkN5ZHOynmfjTO.svg" alt="Tengu demo" width="800"/>
+  </a>
+</p>
 
-**With Docker — lab targets (Juice Shop, DVWA):**
-
-```bash
-cp .env.example .env
-# Edit .env: set ANTHROPIC_API_KEY and TENGU_AGENT_TARGET
-
-make docker-agent-lab
-```
-
-**With Docker — real-world pentests (Tengu + MSF + ZAP, no lab containers):**
-
-```bash
-# Set target and allowed hosts in .env, then:
-make docker-agent-pentest
-```
-
-**Without Docker:**
-
-```bash
-uv sync --extra agent
-python autonomous_tengu.py 192.168.1.100 --scope 192.168.1.0/24 --type blackbox
-```
-
-**Key behaviors:**
-- **Strategist** (Claude) reads the current PTES phase and accumulated state to decide each action
-- **Executor** calls exactly one Tengu MCP tool per iteration
-- **Analyst** (Claude) extracts structured data from tool output and advances phases
-- **Human gate** interrupts execution before destructive tools (`msf_run_module`, `hydra_attack`, `impacket_kerberoast`, `sqlmap_scan` with level≥3)
-- Runs until all 7 PTES phases are covered or `--max-iterations` is reached
-- Final **Reporter** calls `correlate_findings` + `score_risk` + `generate_report`
-
----
-
-## Quick Start
-
-### Docker (Recommended)
-
-The fastest way to get Tengu running — no manual tool installation required.
+### Quick Start
 
 ```bash
 git clone https://github.com/rfunix/tengu.git && cd tengu
-docker compose up -d
+make docker-build
+make docker-up
 ```
 
 Connect Claude Code to the running server:
@@ -107,28 +62,29 @@ Connect Claude Code to the running server:
 claude mcp add --transport sse tengu http://localhost:8000/sse
 ```
 
-**With lab targets (Juice Shop + DVWA):**
+Then ask Claude: `Do a full pentest on http://192.168.1.100`
+
+Claude chains tools automatically: `validate_target` → `whatweb` → `nmap` → `nikto` →
+`nuclei` → `sqlmap` → `correlate_findings` → `generate_report`
+
+### Docker Profiles
+
+| Command | What it starts |
+|---------|----------------|
+| `make docker-up` | Tengu MCP server (`:8000`) |
+| `make docker-lab` | + Juice Shop, DVWA (safe practice targets) |
+| `make docker-pentest` | + Metasploit, OWASP ZAP (real-world targets) |
+| `make docker-full` | + Metasploit, ZAP, and lab targets |
+
+**Scan custom targets without editing files:**
 
 ```bash
-docker compose --profile lab up -d
-# or: make docker-lab
+TENGU_ALLOWED_HOSTS="192.168.1.0/24,10.0.0.0/8" make docker-up
 ```
 
-**For real-world pentests (Metasploit + ZAP, no lab containers):**
+### Image Tiers
 
-```bash
-docker compose --profile exploit --profile proxy up -d
-# or: make docker-pentest
-```
-
-**With Metasploit + ZAP + labs:**
-
-```bash
-docker compose --profile exploit --profile proxy --profile lab up -d
-# or: make docker-full
-```
-
-**Image tiers** — choose the right size for your use case:
+Choose the right size for your use case:
 
 | Tier | Size | MCP Tools | Use case |
 |------|------|-----------|----------|
@@ -137,15 +93,9 @@ docker compose --profile exploit --profile proxy --profile lab up -d
 | `full` | ~8GB | 57 | Everything + AD, wireless, stealth/OPSEC |
 
 ```bash
-TENGU_TIER=minimal docker compose build   # lightweight
-TENGU_TIER=core    docker compose build   # default
-TENGU_TIER=full    docker compose build   # everything
-```
-
-**Scan custom targets** without editing files:
-
-```bash
-TENGU_ALLOWED_HOSTS="192.168.1.0/24,10.0.0.0/8" docker compose up -d
+TENGU_TIER=minimal make docker-build   # lightweight
+TENGU_TIER=core    make docker-build   # default
+TENGU_TIER=full    make docker-build   # everything
 ```
 
 > **All tiers include all 34 prompts and 19 resources** — only the binary tools differ.
@@ -185,12 +135,95 @@ For Claude Desktop, VM/SSE remote setup, and advanced configurations, see [docs/
 
 </details>
 
+### Configuration Reference
+
+```toml
+[targets]
+# REQUIRED: Only these hosts will be scanned
+allowed_hosts = ["192.168.1.0/24", "example.com"]
+blocked_hosts = []  # Always blocked, even if in allowed_hosts
+
+[stealth]
+enabled = false  # Route traffic through Tor/proxy
+
+[stealth.proxy]
+enabled = false
+url = "socks5h://127.0.0.1:9050"
+
+[osint]
+shodan_api_key = ""  # Required for shodan_lookup
+
+[tools.defaults]
+scan_timeout = 300   # seconds
+```
+
+See [docs/configuration-reference.md](docs/configuration-reference.md) for the full reference.
+
+---
+
+## Autonomous Agent Mode
+
+Run a fully autonomous pentest without manual tool invocation. The agent uses Claude as its strategic brain and Tengu as its execution toolset, following the PTES methodology from recon through reporting.
+
+<p align="center">🎬 Demo coming soon</p>
+
+### Quick Start
+
+```bash
+cp .env.example .env
+# Edit .env: set ANTHROPIC_API_KEY and TENGU_AGENT_TARGET
+```
+
+**Lab targets (Juice Shop, DVWA, vulnerable-ftp):**
+
+```bash
+make docker-agent-lab
+```
+
+**Real-world pentests (Tengu + MSF + ZAP, no lab containers):**
+
+```bash
+make docker-agent-pentest
+```
+
+**Without Docker:**
+
+```bash
+uv sync --extra agent
+python autonomous_tengu.py 192.168.1.100 --scope 192.168.1.0/24 --type blackbox
+```
+
+### Agent Docker Profiles
+
+| Command | What it starts |
+|---------|----------------|
+| `make docker-agent-lab` | Agent + Juice Shop, DVWA, vulnerable-ftp |
+| `make docker-agent-pentest` | Agent + Metasploit + ZAP (real targets) |
+
+### How It Works
+
+```
+START → initializer → strategist ─┬─→ executor → analyst ─┬─→ strategist (loop)
+                                   │                        └─→ reporter → END
+                                   ├─→ human_gate → executor
+                                   └─→ reporter → END
+```
+
+**Key behaviors:**
+
+- **Strategist** (Claude) reads the current PTES phase and accumulated state to decide each action
+- **Executor** calls exactly one Tengu MCP tool per iteration
+- **Analyst** (Claude) extracts structured data from tool output and advances phases
+- **Human gate** interrupts execution before destructive tools (`msf_run_module`, `hydra_attack`, `impacket_kerberoast`, `sqlmap_scan` with level≥3)
+- Runs until all 7 PTES phases are covered or `--max-iterations` is reached
+- Final **Reporter** calls `correlate_findings` + `score_risk` + `generate_report`
+
 ---
 
 ## Tool Catalog
 
 > `minimal` (17 tools, ~480MB) · `core` (47 tools, ~7GB, default) · `full` (57 tools, ~8GB)
-> Build with: `TENGU_TIER=<tier> docker compose build`. All tiers include all 34 prompts and 19 resources.
+> Build with: `TENGU_TIER=<tier> make docker-build`. All tiers include all 34 prompts and 19 resources.
 
 | Category | Tools | Count |
 |----------|-------|-------|
@@ -411,78 +444,6 @@ Tengu is built as a **force multiplier for human pentesters**, not an autonomous
 | **Audit Logging** | Every tool invocation logged to `./logs/tengu-audit.log` in JSON format |
 | **Human-in-the-Loop** | `msf_run_module`, `hydra_attack`, and `impacket_kerberoast` require explicit confirmation |
 | **No shell=True — ever** | All subprocess calls use `asyncio.create_subprocess_exec` |
-
----
-
-## Practice Lab
-
-Set up isolated vulnerable targets for safe, legal testing.
-
-```
-┌─────────────────────┐         LAN          ┌──────────────────────┐
-│  Host (Mac/Windows) │◄────────────────────►│  Kali Linux VM       │
-│                     │  Claude → SSE :8000  │                      │
-│  Docker containers  │                      │  Tengu MCP Server    │
-│  :3000  Juice Shop  │◄────────────────────►│  nmap, sqlmap,       │
-│  :80    DVWA        │  Tengu scans targets │  nuclei, hydra...    │
-│  :5013  DVGA        │                      │                      │
-└─────────────────────┘                      └──────────────────────┘
-         ▲
-         │ Claude Code (MCP client)
-```
-
-**Start with Docker Compose** (simplest — runs Tengu + lab targets on one machine):
-
-```bash
-docker compose --profile lab up -d
-```
-
-**Or run lab targets individually on your host:**
-
-```bash
-docker run -d -p 3000:3000 bkimminich/juice-shop      # OWASP Juice Shop
-docker run -d -p 80:80 vulnerables/web-dvwa            # DVWA
-docker run -d -p 5013:5013 dolevf/dvga                 # DVGA (GraphQL)
-docker run -d -p 2121:21 -p 2222:22 tleemcjr/metasploitable2
-```
-
-Then ask Claude:
-
-```
-Do a full pentest on http://192.168.86.30:3000
-```
-
-Claude chains tools automatically: `validate_target` → `whatweb` → `nmap` → `nikto` →
-`nuclei` → `sqlmap` → `correlate_findings` → `generate_report`
-
-For step-by-step Kali VM setup, SSE transport configuration, and remote client connection,
-see [docs/deployment-guide.md](docs/deployment-guide.md).
-
----
-
-## Configuration Reference
-
-```toml
-[targets]
-# REQUIRED: Only these hosts will be scanned
-allowed_hosts = ["192.168.1.0/24", "example.com"]
-blocked_hosts = []  # Always blocked, even if in allowed_hosts
-
-[stealth]
-enabled = false  # Route traffic through Tor/proxy
-
-[stealth.proxy]
-enabled = false
-url = "socks5h://127.0.0.1:9050"
-
-[osint]
-shodan_api_key = ""  # Required for shodan_lookup
-
-[tools.defaults]
-scan_timeout = 300   # seconds
-```
-
-See [docs/configuration-reference.md](docs/configuration-reference.md) for the full reference.
 
 ---
 
