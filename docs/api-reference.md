@@ -1,6 +1,6 @@
 # API Reference
 
-Complete reference for all 66 tools, 20 resources, and 35 prompts in Tengu.
+Complete reference for all 63 tools, 20 resources, and 34 prompts in Tengu.
 
 All tools require the target to be in the `[targets].allowed_hosts` allowlist
 configured in `tengu.toml`, unless explicitly noted otherwise.
@@ -1230,6 +1230,8 @@ Resources provide read-only reference data. Access via their URI.
 | `payloads://{type}` | Curated payload list by type | JSON array of payload strings |
 | `stealth://techniques` | Reference guide for operational security techniques | JSON object with technique descriptions |
 | `stealth://proxy-guide` | Step-by-step proxy and Tor configuration guide | JSON object with configuration steps |
+| `prompts://list` | List of all available prompts with descriptions | JSON array of prompt metadata |
+| `prompts://category/{category}` | Prompts filtered by category (e.g. `workflow`, `reporting`, `quick-actions`) | JSON array of matching prompts |
 
 ### `tools://{tool_name}/usage` Available Guides
 
@@ -1462,3 +1464,10 @@ Compare original findings against retest results to measure remediation effectiv
 | `hunt_subdomains` | Passive and active subdomain enumeration with takeover detection | `domain: str` |
 | `find_vulns` | Template-based vulnerability sweep using nuclei across a target | `target: str`, `severity: str` |
 | `pwn_target` | Full exploitation workflow: recon → vuln scan → exploit → post-exploitation checklist | `target: str` |
+| `msf_exploit_workflow` | Step-by-step Metasploit module selection, configuration, and execution workflow | `target: str`, `service: str` |
+
+### Social Engineering Prompts (v0.3.0)
+
+| Prompt | Description | Key Arguments |
+|--------|-------------|---------------|
+| `social_engineering_assessment` | Structured social engineering assessment covering phishing, pretexting, and physical access simulations | `target: str`, `scope: str` |

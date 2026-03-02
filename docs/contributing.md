@@ -13,7 +13,7 @@ security review, and submit a pull request.
 ```bash
 git clone https://github.com/YOUR_FORK/tengu.git
 cd tengu
-git remote add upstream https://github.com/tengu-project/tengu.git
+git remote add upstream https://github.com/rfunix/tengu.git
 ```
 
 ### 2. Install Development Dependencies

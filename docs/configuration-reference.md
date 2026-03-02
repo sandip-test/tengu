@@ -87,6 +87,10 @@ searchsploit = ""
 # Start RPC with: msfrpcd -P PASSWORD -a 127.0.0.1
 metasploit_rpc = "https://127.0.0.1:55553"
 
+# Social Engineering Toolkit (SET) — used by set_credential_harvester,
+# set_qrcode_attack, set_payload_generator
+setoolkit = ""
+
 
 # =============================================================================
 # [tools.defaults] — Default tool parameters
@@ -108,6 +112,40 @@ scan_timeout = 600
 # Default wordlist for ffuf_fuzz and directory fuzzing
 # Change to your preferred wordlist or a larger SecLists wordlist
 wordlist_path = "/usr/share/seclists/Discovery/Web-Content/common.txt"
+
+
+# =============================================================================
+# [stealth] — Optional anonymization and evasion layer
+# =============================================================================
+[stealth]
+
+# Set to true to enable the stealth layer (proxy routing, UA rotation, jitter)
+enabled = false
+
+[stealth.proxy]
+
+# Enable proxy routing for supported tools (nmap, nuclei, ffuf, etc.)
+enabled = false
+
+# Proxy type: socks5h, socks5, http
+type = "socks5h"
+
+# Proxy host and port
+host = "127.0.0.1"
+port = 9050
+
+[stealth.timing]
+
+# Minimum jitter delay (seconds) added between requests
+min_delay = 0.5
+
+# Maximum jitter delay (seconds)
+max_delay = 3.0
+
+[stealth.user_agent]
+
+# Rotate User-Agent header on each HTTP request
+rotate = true
 
 
 # =============================================================================
@@ -251,6 +289,7 @@ class TenguConfig(BaseModel):
     tools: ToolsConfig      # contains paths and defaults
     rate_limiting: RateLimitingConfig
     cve: CVEConfig
+    stealth: StealthConfig = Field(default_factory=StealthConfig)
 
     @property
     def effective_blocked_hosts(self) -> list[str]:
@@ -326,6 +365,37 @@ class CVEConfig(BaseModel):
     nvd_api_key: str = ""
     cache_path: str = "~/.tengu/cve_cache.db"
     cache_ttl_hours: int = 24
+```
+
+### `StealthConfig`
+
+```python
+class StealthProxyConfig(BaseModel):
+    enabled: bool = False
+    type: str = "socks5h"
+    host: str = "127.0.0.1"
+    port: int = 9050
+
+    @property
+    def url(self) -> str:
+        """Construct proxy URL from fields (e.g. socks5h://127.0.0.1:9050)."""
+        return f"{self.type}://{self.host}:{self.port}"
+
+
+class StealthTimingConfig(BaseModel):
+    min_delay: float = 0.5
+    max_delay: float = 3.0
+
+
+class StealthUserAgentConfig(BaseModel):
+    rotate: bool = True
+
+
+class StealthConfig(BaseModel):
+    enabled: bool = False
+    proxy: StealthProxyConfig = Field(default_factory=StealthProxyConfig)
+    timing: StealthTimingConfig = Field(default_factory=StealthTimingConfig)
+    user_agent: StealthUserAgentConfig = Field(default_factory=StealthUserAgentConfig)
 ```
 
 ---

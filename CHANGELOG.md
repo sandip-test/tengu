@@ -7,6 +7,21 @@ Tengu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.3.0] — Social Engineering
+
+### Added
+
+**Social Engineering Tools (3 new MCP tools)**
+- `set_credential_harvester` — clone a website and capture credentials via SET (authorized phishing simulations only; requires explicit human confirmation)
+- `set_qrcode_attack` — generate a QR code pointing to a target URL for physical social engineering assessments
+- `set_payload_generator` — generate social engineering payloads (PowerShell alphanumeric, reverse, HTA) for authorized red team engagements; requires explicit human confirmation
+
+**Prompts (2 new MCP prompts)**
+- `social_engineering_assessment` — structured social engineering assessment workflow covering phishing, pretexting, and physical access
+- `msf_exploit_workflow` — step-by-step Metasploit module selection, configuration, and execution workflow
+
+---
+
 ## [0.2.1] — Quality and Stealth
 
 ### Added
@@ -18,7 +33,7 @@ Tengu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `proxy_check` — verify proxy reachability and detect IP leak conditions
 - `rotate_identity` — rotate proxy/user-agent and request a new Tor identity atomically
 
-**Quick Action Prompts (8 new prompts in `src/tengu/prompts/quick_actions.py`)**
+**Quick Action Prompts (9 new prompts in `src/tengu/prompts/quick_actions.py`)**
 - `crack_wifi` — guided Wi-Fi capture and offline WPA/WPA2 crack workflow
 - `explore_url` — rapid single-URL web assessment
 - `go_stealth` — configure and verify stealth posture before an engagement
@@ -27,6 +42,7 @@ Tengu uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `hunt_subdomains` — passive and active subdomain enumeration workflow
 - `find_vulns` — template-based vulnerability sweep across a target
 - `pwn_target` — full exploitation workflow with post-exploitation checklist
+- `msf_exploit_workflow` — step-by-step Metasploit module selection, configuration, and execution workflow
 
 ### Improved
 
@@ -271,6 +287,7 @@ abstraction layer over industry-standard pentesting tools.
 
 ---
 
-[0.2.1]: https://github.com/tengu-project/tengu/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/tengu-project/tengu/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/tengu-project/tengu/releases/tag/v0.1.0
+[0.3.0]: https://github.com/rfunix/tengu/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/rfunix/tengu/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/rfunix/tengu/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/rfunix/tengu/releases/tag/v0.1.0
