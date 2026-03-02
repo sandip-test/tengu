@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import operator
 import os
@@ -408,12 +409,33 @@ async def initializer(state: PentestState) -> dict[str, Any]:
         except Exception:
             pass
 
-    # Discover available tools
+    # Discover available tools — filter to only those actually installed on the system
     print("[initializer] Discovering available tools...")
     available_tool_names: list[str] = []
     try:
         tools = await client.list_tools()
-        available_tool_names = [t["name"] for t in tools]
+        all_tool_names = {t["name"] for t in tools}
+
+        # check_tools returns which external binaries are actually installed
+        check_result = await client.call_tool("check_tools", {})
+        installed = {
+            t["name"]
+            for t in check_result.get("tools", [])
+            if t.get("available")
+        }
+        # Pure-Python tools (correlate, score_risk, etc.) have no binary — always available
+        pure_python = {
+            "check_tools", "validate_target", "correlate_findings", "score_risk",
+            "cve_lookup", "cve_search", "generate_report", "analyze_headers",
+            "test_cors", "dns_enumerate", "whois_lookup", "hash_identify",
+            "graphql_security_check",
+        }
+        available_tool_names = sorted(
+            all_tool_names & (installed | pure_python)
+        )
+        missing = sorted(all_tool_names - set(available_tool_names))
+        print(f"[initializer] {len(available_tool_names)} tools available, "
+              f"{len(missing)} not installed (skipped)")
     except Exception as exc:
         print(f"[initializer] Warning: tool discovery failed: {exc}")
 
@@ -466,7 +488,10 @@ async def strategist(state: PentestState) -> dict[str, Any]:
     print("[strategist] Analyzing state and deciding next action...")
 
     try:
-        tools = await client.list_tools()
+        all_tools = await client.list_tools()
+        # Filter to only tools confirmed available in the initializer
+        available = set(state.get("available_tools", []))
+        tools = [t for t in all_tools if not available or t["name"] in available]
     except Exception as exc:
         return {"error": f"Failed to list tools: {exc}", "is_complete": True}
 
@@ -959,7 +984,8 @@ async def main() -> None:
     try:
         await run_agent(args.target, scope, args.engagement_type, args.max_iterations)
     finally:
-        await client.disconnect()
+        with contextlib.suppress(Exception):  # anyio cancel-scope errors on shutdown are non-fatal
+            await client.disconnect()
 
 
 if __name__ == "__main__":

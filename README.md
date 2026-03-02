@@ -57,15 +57,20 @@ START → initializer → strategist ─┬─→ executor → analyst ─┬─
                                    └─→ reporter → END
 ```
 
-**With Docker (lab targets included):**
+**With Docker — lab targets (Juice Shop, DVWA):**
 
 ```bash
 cp .env.example .env
 # Edit .env: set ANTHROPIC_API_KEY and TENGU_AGENT_TARGET
 
-TENGU_AGENT_TARGET=juice-shop \
-TENGU_ALLOWED_HOSTS=juice-shop,dvwa \
-docker compose --profile agent --profile lab up
+make docker-agent-lab
+```
+
+**With Docker — real-world pentests (Tengu + MSF + ZAP, no lab containers):**
+
+```bash
+# Set target and allowed hosts in .env, then:
+make docker-agent-pentest
 ```
 
 **Without Docker:**
@@ -106,12 +111,21 @@ claude mcp add --transport sse tengu http://localhost:8000/sse
 
 ```bash
 docker compose --profile lab up -d
+# or: make docker-lab
+```
+
+**For real-world pentests (Metasploit + ZAP, no lab containers):**
+
+```bash
+docker compose --profile exploit --profile proxy up -d
+# or: make docker-pentest
 ```
 
 **With Metasploit + ZAP + labs:**
 
 ```bash
 docker compose --profile exploit --profile proxy --profile lab up -d
+# or: make docker-full
 ```
 
 **Image tiers** — choose the right size for your use case:

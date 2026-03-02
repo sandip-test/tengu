@@ -24,13 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:/root/.cargo/bin:${PATH}"
 
-# Cache Python dependencies separately from source code
-# README.md is required by hatchling (referenced in pyproject.toml)
-WORKDIR /app
-COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-dev --extra agent
-
-# Install Go tools (core + full tiers only)
+# Install Go tools BEFORE Python deps so Go cache survives uv.lock changes
 ENV GOPATH=/root/go
 ENV PATH="${GOPATH}/bin:/usr/local/go/bin:${PATH}"
 
@@ -44,7 +38,13 @@ RUN mkdir -p /root/go/bin && \
         go install github.com/haccer/subjack@latest; \
     fi
 
-# Copy application source
+# Cache Python dependencies separately from source code
+# README.md is required by hatchling (referenced in pyproject.toml)
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md ./
+RUN uv sync --frozen --no-dev --extra agent
+
+# Copy application source (invalidates only on src/ changes, not on dep changes)
 COPY . /app
 
 # ══════════════════════════════════════════════════════════════════════════════

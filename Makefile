@@ -5,7 +5,7 @@
 .PHONY: install-tools-cloud install-tools-api install-tools-ad
 .PHONY: install-tools-wireless install-tools-stealth
 .PHONY: docker-build docker-up docker-down docker-logs docker-shell
-.PHONY: docker-lab docker-full docker-clean
+.PHONY: docker-lab docker-full docker-pentest docker-agent docker-agent-lab docker-agent-pentest docker-clean
 
 # ============================================================
 # CONFIGURATION
@@ -153,6 +153,20 @@ docker-lab: ## Start Tengu + lab targets (Juice Shop, DVWA)
 
 docker-full: ## Start everything (Tengu + MSF + ZAP + labs)
 	docker compose --profile exploit --profile proxy --profile lab up -d
+
+docker-pentest: ## Start Tengu + MSF + ZAP for real-world pentests (no lab targets)
+	docker compose --profile exploit --profile proxy up -d
+
+docker-agent: ## Run autonomous agent (requires .env with ANTHROPIC_API_KEY and TENGU_AGENT_TARGET)
+	docker compose --profile agent run --rm tengu-agent
+
+docker-agent-lab: ## Run autonomous agent + lab targets (Juice Shop, DVWA, vulnerable-ftp)
+	docker compose --profile lab up -d && \
+	docker compose --profile agent run --rm tengu-agent
+
+docker-agent-pentest: ## Run autonomous agent + MSF + ZAP for real-world pentests (no lab targets)
+	docker compose --profile exploit --profile proxy up -d && \
+	docker compose --profile agent run --rm tengu-agent
 
 docker-clean: ## Remove Docker images and volumes
 	docker compose down -v --rmi local
