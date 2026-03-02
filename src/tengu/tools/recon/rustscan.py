@@ -90,9 +90,12 @@ async def rustscan_scan(
 
     args = [
         tool_path,
-        "-a", target,
-        "-p", safe_ports,
-        "-b", str(batch_size),
+        "-a",
+        target,
+        "-p",
+        safe_ports,
+        "-b",
+        str(batch_size),
         "--accessible",
         "--no-config",
     ]

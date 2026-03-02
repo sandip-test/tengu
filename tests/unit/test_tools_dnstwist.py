@@ -147,7 +147,12 @@ class TestParseDnstwistOutput:
 
     def test_registered_true_via_mx(self) -> None:
         data = [
-            {"fuzzer": "addition", "domain": "examplee.com", "dns_a": [], "dns_mx": ["mx.example.com"]}
+            {
+                "fuzzer": "addition",
+                "domain": "examplee.com",
+                "dns_a": [],
+                "dns_mx": ["mx.example.com"],
+            }
         ]
         result = _parse_dnstwist_output(json.dumps(data))
         assert result[0]["registered"] is True

@@ -89,7 +89,8 @@ async def responder_capture(
     # Build args — list only, never shell=True
     args: list[str] = [
         tool_path_str,
-        "-I", safe_interface,
+        "-I",
+        safe_interface,
         "-r",
         "-d",
         "-w",

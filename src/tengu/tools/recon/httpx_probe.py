@@ -39,9 +39,7 @@ def _parse_httpx_output(output: str) -> list[dict]:
         except (json.JSONDecodeError, KeyError):
             # Plain text line (non-JSON output)
             if line.startswith("http"):
-                results.append(
-                    {"url": line, "status_code": None, "title": "", "technologies": []}
-                )
+                results.append({"url": line, "status_code": None, "title": "", "technologies": []})
     return results
 
 

@@ -1,4 +1,5 @@
 """Unit tests for crlfuzz_scan: validation, sanitization, and output parsing."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch

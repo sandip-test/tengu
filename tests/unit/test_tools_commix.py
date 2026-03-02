@@ -1,4 +1,5 @@
 """Unit tests for commix_scan: validation, sanitization, and output parsing."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -34,7 +35,9 @@ def _mock_stealth(enabled: bool = False, proxy_url: str = "") -> MagicMock:
     stealth = MagicMock()
     stealth.enabled = enabled
     stealth.proxy_url = proxy_url
-    stealth.inject_proxy_flags = MagicMock(side_effect=lambda tool, args: args + ["--proxy", proxy_url])
+    stealth.inject_proxy_flags = MagicMock(
+        side_effect=lambda tool, args: args + ["--proxy", proxy_url]
+    )
     return stealth
 
 

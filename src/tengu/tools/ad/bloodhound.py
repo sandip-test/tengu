@@ -118,11 +118,16 @@ async def bloodhound_collect(
     # Build args — list only, never shell=True
     args: list[str] = [
         tool_path_str,
-        "-d", domain,
-        "-u", safe_username,
-        "-dc", target,
-        "-c", collection_method,
-        "-o", safe_output_dir,
+        "-d",
+        domain,
+        "-u",
+        safe_username,
+        "-dc",
+        target,
+        "-c",
+        collection_method,
+        "-o",
+        safe_output_dir,
         "--zip",
         "--dns-tcp",
     ]

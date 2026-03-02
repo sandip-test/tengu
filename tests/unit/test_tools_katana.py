@@ -73,7 +73,9 @@ async def _run_katana(
         patch(f"{_MOD}.run_command", new=AsyncMock(return_value=(stdout, "", 0))),
         patch("tengu.stealth.get_stealth_layer", return_value=_mock_stealth()),
     ):
-        return await katana_crawl(ctx, target, depth=depth, concurrency=concurrency, js_crawl=js_crawl)
+        return await katana_crawl(
+            ctx, target, depth=depth, concurrency=concurrency, js_crawl=js_crawl
+        )
 
 
 class TestKatanaCrawl:
@@ -158,15 +160,11 @@ class TestParseKatanaOutput:
         assert len(result) == 2
 
     def test_non_urls_skipped(self):
-        result = _parse_katana_output(
-            "Starting crawler\nhttps://example.com/admin\nFinished\n"
-        )
+        result = _parse_katana_output("Starting crawler\nhttps://example.com/admin\nFinished\n")
         assert len(result) == 1
 
     def test_duplicates_removed(self):
-        result = _parse_katana_output(
-            "https://example.com/page\nhttps://example.com/page\n"
-        )
+        result = _parse_katana_output("https://example.com/page\nhttps://example.com/page\n")
         assert len(result) == 1
 
     def test_only_https_scheme(self):

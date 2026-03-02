@@ -1,4 +1,5 @@
 """Unit tests for impacket expansion: secretsdump, psexec, wmiexec, smbclient."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -324,9 +325,7 @@ async def _run_smbclient(
         patch(f"{_MOD}.shutil.which", return_value=None),
         patch(f"{_MOD}.resolve_tool_path", return_value="/usr/bin/impacket-smbclient"),
     ):
-        return await impacket_smbclient(
-            ctx, target, domain, username, action=action, share=share
-        )
+        return await impacket_smbclient(ctx, target, domain, username, action=action, share=share)
 
 
 class TestImpacketSmbclient:

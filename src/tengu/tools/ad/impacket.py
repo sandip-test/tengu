@@ -758,7 +758,8 @@ async def impacket_smbclient(
         tool_path_str,
         cred_arg,
         target,
-        "-c", smb_command,
+        "-c",
+        smb_command,
     ]
     if safe_hashes:
         args.extend(["-hashes", safe_hashes])

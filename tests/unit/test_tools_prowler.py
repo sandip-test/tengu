@@ -71,7 +71,13 @@ class TestProwlerScan:
 
     async def test_return_keys_present(self, ctx: MagicMock) -> None:
         result = await _run_prowler(ctx)
-        for key in ("tool", "provider", "duration_seconds", "findings_summary", "critical_findings"):
+        for key in (
+            "tool",
+            "provider",
+            "duration_seconds",
+            "findings_summary",
+            "critical_findings",
+        ):
             assert key in result
 
     async def test_provider_aws(self, ctx: MagicMock) -> None:

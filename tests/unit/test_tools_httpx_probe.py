@@ -95,8 +95,7 @@ class TestHttpxProbe:
 
     async def test_json_output_parsed(self, ctx):
         stdout = (
-            json.dumps({"url": "https://example.com", "status-code": 200, "title": "Test"})
-            + "\n"
+            json.dumps({"url": "https://example.com", "status-code": 200, "title": "Test"}) + "\n"
         )
         result = await _run_httpx_probe(ctx, stdout=stdout)
         assert result["probes_count"] == 1

@@ -152,9 +152,7 @@ class TestParseRustscanOutput:
         assert result["open_ports"] == []
 
     def test_multiple_hosts_ports_collected(self) -> None:
-        result = _parse_rustscan_output(
-            "Open 10.0.0.1:22\nOpen 10.0.0.2:80\nOpen 10.0.0.1:443\n"
-        )
+        result = _parse_rustscan_output("Open 10.0.0.1:22\nOpen 10.0.0.2:80\nOpen 10.0.0.1:443\n")
         assert 22 in result["open_ports"]
         assert 80 in result["open_ports"]
         assert 443 in result["open_ports"]

@@ -94,8 +94,10 @@ async def dnstwist_scan(
 
     args = [
         tool_path,
-        "--format", "json",
-        "--threads", str(threads),
+        "--format",
+        "json",
+        "--threads",
+        str(threads),
         domain,
     ]
     if registered_only:

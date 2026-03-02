@@ -96,10 +96,14 @@ async def snmpwalk_scan(
 
     args = [
         tool_path,
-        "-v", version,
-        "-c", safe_community,
-        "-O", "n",
-        "-r", "1",
+        "-v",
+        version,
+        "-c",
+        safe_community,
+        "-O",
+        "n",
+        "-r",
+        "1",
         target,
         safe_oid,
     ]

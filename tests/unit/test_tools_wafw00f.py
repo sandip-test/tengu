@@ -86,7 +86,14 @@ class TestWafw00fScan:
 
     async def test_return_keys_present(self, ctx):
         result = await _run_wafw00f(ctx)
-        for key in ("tool", "target", "duration_seconds", "waf_detected", "detections", "raw_output"):
+        for key in (
+            "tool",
+            "target",
+            "duration_seconds",
+            "waf_detected",
+            "detections",
+            "raw_output",
+        ):
             assert key in result
 
     async def test_waf_detected_from_output(self, ctx):

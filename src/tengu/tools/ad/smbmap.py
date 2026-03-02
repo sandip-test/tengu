@@ -102,8 +102,10 @@ async def smbmap_scan(
     # Build args — list only, never shell=True
     args: list[str] = [
         tool_path_str,
-        "-H", target,
-        "-d", domain,
+        "-H",
+        target,
+        "-d",
+        domain,
         "--no-banner",
     ]
     if safe_username:

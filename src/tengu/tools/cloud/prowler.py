@@ -92,10 +92,12 @@ async def prowler_scan(
     args = [
         tool_path,
         safe_provider,
-        "-M", "json",
+        "-M",
+        "json",
         "-z",
         "-q",
-        "-o", safe_report_dir,
+        "-o",
+        safe_report_dir,
     ]
     if safe_provider == "aws" and safe_profile:
         args.extend(["-p", safe_profile])
@@ -113,7 +115,9 @@ async def prowler_scan(
         try:
             stdout, stderr, returncode = await run_command(args, timeout=effective_timeout)
         except Exception as exc:
-            await audit.log_tool_call("prowler", safe_provider, params, result="failed", error=str(exc))
+            await audit.log_tool_call(
+                "prowler", safe_provider, params, result="failed", error=str(exc)
+            )
             raise
 
         duration = time.monotonic() - start

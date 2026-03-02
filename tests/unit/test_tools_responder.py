@@ -1,4 +1,5 @@
 """Unit tests for responder_capture."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -158,9 +159,7 @@ class TestParseResponderOutput:
         assert len(result["connections"]) >= 1
 
     def test_hashes_capped_at_50(self):
-        lines = "\n".join(
-            f"USER{i}::DOM:aad3:hash{i}:NTLMv2:extra:extra:extra" for i in range(60)
-        )
+        lines = "\n".join(f"USER{i}::DOM:aad3:hash{i}:NTLMv2:extra:extra:extra" for i in range(60))
         result = _parse_responder_output(lines)
         assert len(result["captured_hashes"]) <= 50
 
