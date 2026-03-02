@@ -97,22 +97,14 @@ class TestSetCredentialHarvester:
         mock_path_class.return_value.unlink = MagicMock()
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 AsyncMock(return_value=("SET output", "", 0)),
@@ -150,15 +142,9 @@ class TestSetCredentialHarvester:
         mock_audit = _setup_audit_mock()
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
         ):
             allowlist_instance = MagicMock()
             allowlist_instance.check.side_effect = PermissionError("target not allowed")
@@ -187,22 +173,14 @@ class TestSetCredentialHarvester:
         mock_path_class.return_value.unlink = MagicMock()
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 AsyncMock(side_effect=TimeoutError("timed out")),
@@ -237,9 +215,7 @@ class TestSetCredentialHarvester:
         """Non-URL target raises InvalidInputError."""
         ctx = _make_ctx()
 
-        with patch(
-            "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-        ):
+        with patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()):
             from tengu.tools.social.set_toolkit import set_credential_harvester
 
             with pytest.raises(InvalidInputError):
@@ -260,22 +236,14 @@ class TestSetCredentialHarvester:
         mock_path_class.return_value = mock_path_instance
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 AsyncMock(return_value=("", "", 0)),
@@ -310,22 +278,14 @@ class TestSetCredentialHarvester:
         mock_path_class.return_value = mock_path_instance
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 AsyncMock(side_effect=RuntimeError("seautomate crashed")),
@@ -360,22 +320,14 @@ class TestSetCredentialHarvester:
         mock_path_class.return_value.unlink = MagicMock()
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 AsyncMock(return_value=("", "error occurred", 1)),
@@ -416,22 +368,14 @@ class TestSetQrcodeAttack:
         mock_path_class.return_value.unlink = MagicMock()
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 AsyncMock(return_value=("QR code created", "", 0)),
@@ -459,9 +403,7 @@ class TestSetQrcodeAttack:
         """Non-URL input raises InvalidInputError."""
         ctx = _make_ctx()
 
-        with patch(
-            "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-        ):
+        with patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()):
             from tengu.tools.social.set_toolkit import set_qrcode_attack
 
             with pytest.raises(InvalidInputError):
@@ -474,15 +416,9 @@ class TestSetQrcodeAttack:
         mock_audit = _setup_audit_mock()
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
         ):
             allowlist_instance = MagicMock()
             allowlist_instance.check.side_effect = PermissionError("blocked")
@@ -508,22 +444,14 @@ class TestSetQrcodeAttack:
             return "/tmp/fake_set.txt"
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 AsyncMock(return_value=("", "", 0)),
@@ -563,22 +491,14 @@ class TestSetPayloadGenerator:
         mock_path_class.return_value.unlink = MagicMock()
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 AsyncMock(return_value=("payload created", "", 0)),
@@ -611,9 +531,7 @@ class TestSetPayloadGenerator:
         """Unknown payload_type raises InvalidInputError."""
         ctx = _make_ctx()
 
-        with patch(
-            "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-        ):
+        with patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()):
             from tengu.tools.social.set_toolkit import set_payload_generator
 
             with pytest.raises(InvalidInputError):
@@ -691,22 +609,14 @@ class TestSetPayloadGenerator:
             return "/tmp/fake_set.txt"
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 AsyncMock(return_value=("", "", 0)),
@@ -721,9 +631,7 @@ class TestSetPayloadGenerator:
 
             from tengu.tools.social.set_toolkit import set_payload_generator
 
-            await set_payload_generator(
-                ctx, payload_type="hta", lhost="10.0.0.1", lport=9090
-            )
+            await set_payload_generator(ctx, payload_type="hta", lhost="10.0.0.1", lport=9090)
 
         # Menu: 1 → 4 → 3 (hta) → lhost → lport
         assert len(captured_answers) == 1
@@ -741,15 +649,9 @@ class TestSetPayloadGenerator:
         mock_audit = _setup_audit_mock()
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
         ):
             allowlist_instance = MagicMock()
             allowlist_instance.check.side_effect = PermissionError("lhost not allowed")
@@ -772,9 +674,7 @@ class TestSetPayloadGenerator:
         """Invalid lhost (shell metacharacters) raises InvalidInputError."""
         ctx = _make_ctx()
 
-        with patch(
-            "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-        ):
+        with patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()):
             from tengu.tools.social.set_toolkit import set_payload_generator
 
             with pytest.raises(InvalidInputError):
@@ -796,22 +696,14 @@ class TestSetPayloadGenerator:
         mock_path_class.return_value = mock_path_instance
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 AsyncMock(return_value=("", "", 0)),
@@ -844,22 +736,14 @@ class TestSetPayloadGenerator:
         mock_path_class.return_value.unlink = MagicMock()
 
         with (
-            patch(
-                "tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit
-            ),
+            patch("tengu.tools.social.set_toolkit.get_config", return_value=_mock_config()),
+            patch("tengu.tools.social.set_toolkit.get_audit_logger", return_value=mock_audit),
             patch(
                 "tengu.tools.social.set_toolkit.resolve_tool_path",
                 return_value="/usr/bin/seautomate",
             ),
-            patch(
-                "tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx
-            ),
-            patch(
-                "tengu.tools.social.set_toolkit.make_allowlist_from_config"
-            ) as mock_allowlist,
+            patch("tengu.tools.social.set_toolkit.rate_limited", return_value=mock_rl_ctx),
+            patch("tengu.tools.social.set_toolkit.make_allowlist_from_config") as mock_allowlist,
             patch(
                 "tengu.tools.social.set_toolkit.run_command",
                 mock_run_command,
@@ -874,9 +758,7 @@ class TestSetPayloadGenerator:
 
             from tengu.tools.social.set_toolkit import set_payload_generator
 
-            await set_payload_generator(
-                ctx, payload_type="hta", lhost="10.0.0.1", lport=8080
-            )
+            await set_payload_generator(ctx, payload_type="hta", lhost="10.0.0.1", lport=8080)
 
         mock_run_command.assert_awaited_once()
         call_args = mock_run_command.call_args[0][0]

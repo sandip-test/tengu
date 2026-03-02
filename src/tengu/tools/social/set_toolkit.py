@@ -318,9 +318,7 @@ async def set_payload_generator(
     try:
         async with rate_limited("setoolkit"):
             start = time.monotonic()
-            await audit.log_tool_call(
-                "set_payload_generator", lhost, params, result="started"
-            )
+            await audit.log_tool_call("set_payload_generator", lhost, params, result="started")
             try:
                 stdout, stderr, returncode = await run_command(
                     [seautomate_path, answer_file], timeout=effective_timeout
