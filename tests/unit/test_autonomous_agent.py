@@ -7,6 +7,9 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+pytest.importorskip("anthropic", reason="requires 'agent' extra: uv sync --extra agent")
+
 from autonomous_tengu import (
     DESTRUCTIVE_TOOLS,
     PentestState,
