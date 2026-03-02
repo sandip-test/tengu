@@ -28,7 +28,7 @@ ENV PATH="/root/.local/bin:/root/.cargo/bin:${PATH}"
 # README.md is required by hatchling (referenced in pyproject.toml)
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --extra agent
 
 # Install Go tools (core + full tiers only)
 ENV GOPATH=/root/go
@@ -107,7 +107,8 @@ COPY --from=builder /app /app
 # ── Copy Docker-specific configuration ──────────────────────────────────────
 COPY docker/tengu.toml /app/tengu.toml
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY docker/entrypoint-agent.sh /entrypoint-agent.sh
+RUN chmod +x /entrypoint.sh /entrypoint-agent.sh
 
 # ── Runtime environment ──────────────────────────────────────────────────────
 ENV PATH="/root/.local/bin:/usr/local/bin:${PATH}"

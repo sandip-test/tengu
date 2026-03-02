@@ -21,6 +21,7 @@
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-compatible-green.svg" alt="MCP"></a>
   <img src="https://img.shields.io/badge/tools-57-orange.svg" alt="Tools">
   <img src="https://img.shields.io/badge/version-0.2.1-brightgreen.svg" alt="Version">
+  <img src="https://img.shields.io/badge/agent-LangGraph-purple.svg" alt="Agent">
 </p>
 
 ---
@@ -40,6 +41,47 @@
 - **34 Workflows** — Pre-built prompts for full pentest, web app, AD, cloud, and more
 - **19 Resources** — Built-in OWASP Top 10, MITRE ATT&CK, PTES, and pentest checklists
 - **Stealth Layer** — Optional Tor/SOCKS5 proxy routing, UA rotation, and timing jitter
+
+---
+
+## Autonomous Agent Mode
+
+> **New:** Run a fully autonomous pentest without manual tool invocation. The agent
+> uses Claude as its strategic brain and Tengu as its execution toolset, following
+> the PTES methodology from recon through reporting.
+
+```
+START → initializer → strategist ─┬─→ executor → analyst ─┬─→ strategist (loop)
+                                   │                        └─→ reporter → END
+                                   ├─→ human_gate → executor
+                                   └─→ reporter → END
+```
+
+**With Docker (lab targets included):**
+
+```bash
+cp .env.example .env
+# Edit .env: set ANTHROPIC_API_KEY and TENGU_AGENT_TARGET
+
+TENGU_AGENT_TARGET=juice-shop \
+TENGU_ALLOWED_HOSTS=juice-shop,dvwa \
+docker compose --profile agent --profile lab up
+```
+
+**Without Docker:**
+
+```bash
+uv sync --extra agent
+python autonomous_tengu.py 192.168.1.100 --scope 192.168.1.0/24 --type blackbox
+```
+
+**Key behaviors:**
+- **Strategist** (Claude) reads the current PTES phase and accumulated state to decide each action
+- **Executor** calls exactly one Tengu MCP tool per iteration
+- **Analyst** (Claude) extracts structured data from tool output and advances phases
+- **Human gate** interrupts execution before destructive tools (`msf_run_module`, `hydra_attack`, `impacket_kerberoast`, `sqlmap_scan` with level≥3)
+- Runs until all 7 PTES phases are covered or `--max-iterations` is reached
+- Final **Reporter** calls `correlate_findings` + `score_risk` + `generate_report`
 
 ---
 
