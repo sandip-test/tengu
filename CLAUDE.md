@@ -20,9 +20,9 @@ pentesting tools to AI assistants through a clean, secure interface.
 | Entry point     | `src/tengu/server.py` → `FastMCP("Tengu")`        |
 | Config file     | `tengu.toml` at project root                      |
 | Test suite      | 1931+ tests, 0 lint errors |
-| Tools           | 63 MCP tools                                      |
+| Tools           | 66 MCP tools                                      |
 | Resources       | 20 MCP resources                                  |
-| Prompts         | 34 MCP prompts                                    |
+| Prompts         | 35 MCP prompts                                    |
 
 ---
 
@@ -127,6 +127,8 @@ src/tengu/
 │   ├── ad/                # enum4linux, nxc, impacket (impacket_kerberoast)
 │   ├── wireless/          # aircrack
 │   ├── iac/               # checkov
+│   ├── social/            # set_toolkit (set_credential_harvester, set_qrcode_attack,
+│   │                      # set_payload_generator)
 │   └── stealth/           # tor_check, tor_new_identity, check_anonymity,
 │                          # proxy_check, rotate_identity
 │
@@ -147,8 +149,9 @@ src/tengu/
     │                         # api_security_assessment, ad_assessment, container_assessment,
     │                         # cloud_assessment, bug_bounty_workflow, compliance_assessment,
     │                         # wireless_assessment
-    └── quick_actions.py    # crack_wifi, explore_url, go_stealth, find_secrets,
-                            # map_network, hunt_subdomains, find_vulns, pwn_target
+    ├── quick_actions.py    # crack_wifi, explore_url, go_stealth, find_secrets,
+    │                       # map_network, hunt_subdomains, find_vulns, pwn_target
+    └── social_engineering.py # social_engineering_assessment
 ```
 
 ---

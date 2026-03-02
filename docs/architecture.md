@@ -10,9 +10,9 @@ Tengu implements three MCP primitives:
 
 | Primitive | Count | Purpose |
 |-----------|-------|---------|
-| Tools     | 56    | Active operations: scanning, exploitation, analysis, stealth |
-| Resources | 19    | Read-only reference data: OWASP, PTES, MITRE ATT&CK, checklists, payloads |
-| Prompts   | 34    | Guided workflow templates for complex engagements |
+| Tools     | 66    | Active operations: scanning, exploitation, analysis, stealth |
+| Resources | 20    | Read-only reference data: OWASP, PTES, MITRE ATT&CK, checklists, payloads |
+| Prompts   | 35    | Guided workflow templates for complex engagements |
 
 ---
 
@@ -123,7 +123,7 @@ graph TD
 
 ## Tool Categories and Coverage
 
-56 tools across 17 categories as of v0.2.1.
+66 tools across 18 categories as of v0.2.2.
 
 ```mermaid
 graph LR
@@ -365,7 +365,7 @@ implementation without changing any tool code.
 
 | Module | Description |
 |--------|-------------|
-| `server.py` | FastMCP server instance. Imports and registers all 56 tools, 19 resources, and 34 prompts. Contains the `main()` entry point. |
+| `server.py` | FastMCP server instance. Imports and registers all 66 tools, 20 resources, and 35 prompts. Contains the `main()` entry point. |
 | `config.py` | Loads `tengu.toml` with `tomllib`, applies env var overrides, returns a `TenguConfig` singleton. Contains default blocked hosts list. |
 | `types.py` | All shared Pydantic v2 models: network scan models (`Host`, `Port`, `ScanResult`), web models (`SecurityHeader`, `CORSResult`, `SSLResult`), finding models (`Finding`, `Evidence`), report models (`PentestReport`, `RiskMatrix`), CVE models (`CVERecord`, `CVSSMetrics`), tool status models (`ToolStatus`, `ToolsCheckResult`). |
 | `exceptions.py` | Custom exception hierarchy rooted at `TenguError`. Each exception carries structured data (tool name, target, returncode, etc.) for programmatic handling. |

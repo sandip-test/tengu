@@ -61,9 +61,9 @@ src/tengu/
 ├── security/              # sanitizer, allowlist, rate_limiter, audit logger
 ├── executor/              # Safe async subprocess runner (never shell=True)
 ├── stealth/               # Tor/proxy injection, UA rotation, timing jitter
-├── tools/                 # 56 MCP tools, grouped by category
-├── resources/             # 19 MCP resources (static JSON + loader functions)
-└── prompts/               # 26 MCP workflow prompts
+├── tools/                 # 66 MCP tools, grouped by category
+├── resources/             # 20 MCP resources (static JSON + loader functions)
+└── prompts/               # 35 MCP workflow prompts
 ```
 
 Every tool invocation passes through this mandatory pipeline:
