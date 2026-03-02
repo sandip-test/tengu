@@ -65,8 +65,10 @@ def cloud_assessment(provider: str, scope: str = "full", compliance: str = "") -
 ## Scope: {scope}{compliance_note}
 
 ## Phase 1 — Automated Cloud Audit
-1. `scoutsuite_scan(provider="{provider}")` — comprehensive cloud configuration audit
-2. Review ScoutSuite report for high/critical findings
+1. `scoutsuite_scan(provider="{provider}")` — comprehensive cloud configuration audit (broad coverage)
+2. `prowler_scan(provider="{provider}")` — compliance-focused audit (CIS benchmarks, CVE checks)
+   - Run both: ScoutSuite for breadth, Prowler for compliance mapping and severity scoring
+3. Correlate findings from both tools — overlapping issues = higher confidence
 
 ## Phase 2 — IAM Review (Highest Priority)
 3. Check for over-privileged IAM policies (AWS: AdministratorAccess, PowerUserAccess)

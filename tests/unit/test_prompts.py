@@ -197,10 +197,15 @@ class TestAssessInjection:
         result = assess_injection("https://example.com", injection_type="xss")
         assert "xss_scan" in result
 
-    def test_command_type_uses_nuclei(self):
+    def test_command_type_uses_commix(self):
         result = assess_injection("https://example.com", injection_type="command")
-        assert "nuclei_scan" in result
+        assert "commix_scan" in result
         assert "OS Command Injection" in result
+
+    def test_crlf_type_uses_crlfuzz(self):
+        result = assess_injection("https://example.com", injection_type="crlf")
+        assert "crlfuzz_scan" in result
+        assert "CRLF Injection" in result
 
     def test_ssti_type_uses_nuclei(self):
         result = assess_injection("https://example.com", injection_type="ssti")

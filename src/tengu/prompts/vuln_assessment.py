@@ -8,7 +8,12 @@ def assess_injection(url: str, injection_type: str = "sql") -> str:
     tool_map = {
         "sql": ("sqlmap_scan", "SQL Injection", "owasp://top10/2025/A03"),
         "xss": ("xss_scan", "Cross-Site Scripting", "owasp://top10/2025/A03"),
-        "command": ("nuclei_scan", "OS Command Injection", "owasp://top10/2025/A03"),
+        "command": ("commix_scan", "OS Command Injection", "owasp://top10/2025/A03"),
+        "crlf": (
+            "crlfuzz_scan",
+            "CRLF Injection / HTTP Response Splitting",
+            "owasp://top10/2025/A03",
+        ),
         "ssti": ("nuclei_scan", "Server-Side Template Injection", "owasp://top10/2025/A03"),
     }
 

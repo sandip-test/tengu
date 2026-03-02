@@ -81,28 +81,32 @@ def explore_url(url: str, depth: str = "normal") -> str:
 
 ## Depth: {depth.upper()}
 
-## Phase 1 — Headers and TLS (always)
-1. `analyze_headers(url="{url}")` — check security headers (CSP, HSTS, X-Frame-Options, etc.)
-2. `test_cors(url="{url}")` — test CORS misconfiguration (wildcard origins, credentials)
-3. `ssl_tls_check(host="{
+## Phase 1 — WAF Detection + Headers + TLS (always)
+1. `wafw00f_scan(target="{
+        url
+    }")` — detect WAF type before active scanning (prevents false negatives)
+2. `analyze_headers(url="{url}")` — check security headers (CSP, HSTS, X-Frame-Options, etc.)
+3. `test_cors(url="{url}")` — test CORS misconfiguration (wildcard origins, credentials)
+4. `ssl_tls_check(host="{
         url.split("//")[-1].split("/")[0]
     }")` — TLS version, cipher suites, certificate chain
 {"" if depth == "quick" else ""}
 ## Phase 2 — Technology Fingerprint (always)
-4. `whatweb_scan(url="{url}")` — detect CMS, frameworks, server version, JavaScript libraries
-5. Based on detected tech, check for CMS-specific vulnerabilities:
+5. `whatweb_scan(url="{url}")` — detect CMS, frameworks, server version, JavaScript libraries
+6. Based on detected tech, check for CMS-specific vulnerabilities:
    - WordPress: `wpscan_scan(url="{url}")`
    - Testssl: `testssl_check(host="{url.split("//")[-1].split("/")[0]}")`
 {
         '''
 ## Phase 3 — Directory and File Fuzzing (normal + deep)
-6. `ffuf_fuzz(url="{url}/FUZZ", wordlist="/usr/share/seclists/Discovery/Web-Content/common.txt")` — hidden paths
-7. `gobuster_scan(url="{url}", mode="dir")` — directory brute-force (parallel confirmation)
-8. Look for: admin panels, backup files (.bak, .old), config files, API endpoints
+7. `ffuf_fuzz(url="{url}/FUZZ", wordlist="/usr/share/seclists/Discovery/Web-Content/common.txt")` — hidden paths
+8. `feroxbuster_scan(target="{url}", depth=3)` — recursive discovery (finds /api/v1/users/profile that ffuf misses)
+9. `katana_crawl(target="{url}", depth=3)` — crawl all reachable links and form actions
+10. Look for: admin panels, backup files (.bak, .old), config files, API endpoints
 
 ## Phase 4 — Vulnerability Scanning (normal + deep)
-9. `nuclei_scan(target="{url}", severity=["medium","high","critical"])` — known CVEs and misconfigs
-10. `nikto_scan(url="{url}")` — web server misconfigurations, dangerous files
+11. `nuclei_scan(target="{url}", severity=["medium","high","critical"])` — known CVEs and misconfigs
+12. `nikto_scan(url="{url}")` — web server misconfigurations, dangerous files
 '''
         if depth in ("normal", "deep")
         else ""
@@ -110,17 +114,18 @@ def explore_url(url: str, depth: str = "normal") -> str:
 {
         f'''
 ## Phase 5 — Injection Testing (deep only)
-11. `sqlmap_scan(url="{url}", level=1, risk=1)` — SQL injection (safe mode)
-12. `xss_scan(url="{url}")` — reflected and stored XSS
-13. `arjun_discover(url="{url}")` — discover hidden parameters
-14. Test discovered parameters for SSRF, LFI, SSTI
+13. `sqlmap_scan(url="{url}", level=1, risk=1)` — SQL injection (safe mode)
+14. `xss_scan(url="{url}")` — reflected and stored XSS
+15. `commix_scan(url="{url}")` — OS command injection
+16. `crlfuzz_scan(url="{url}")` — CRLF injection / HTTP response splitting
+17. `arjun_discover(url="{url}")` — discover hidden parameters
 
 ## Phase 6 — API and GraphQL (deep only)
-15. Check for GraphQL: `graphql_security_check(url="{url}/graphql")`
-16. `arjun_discover(url="{url}/api")` — API parameter discovery
+18. Check for GraphQL: `graphql_security_check(url="{url}/graphql")`
+19. `arjun_discover(url="{url}/api")` — API parameter discovery
 
 ## Phase 7 — Offline Content Analysis (deep only)
-17. `httrack_mirror(target="{url}", depth=2, include_assets=False)` — mirror HTML/JS for offline inspection
+20. `httrack_mirror(target="{url}", depth=2, include_assets=False)` — mirror HTML/JS for offline inspection
     - Review `interesting_findings` in the result: hardcoded API keys, credentials, dev comments, internal URLs
     - The mirrored JS bundle captures secrets that never appear in git repos (compiled/minified frontend code)
     - Output dir: /tmp/httrack — search with `grep -r -e api_key -e secret -e token /tmp/httrack/`
@@ -135,9 +140,9 @@ def explore_url(url: str, depth: str = "normal") -> str:
 ## Quick Reference
 | Depth | Tools Used |
 |-------|-----------|
-| quick | analyze_headers, test_cors, ssl_tls_check, whatweb_scan |
-| normal | + ffuf_fuzz, gobuster_scan, nuclei_scan, nikto_scan |
-| deep | + sqlmap_scan, xss_scan, arjun_discover, graphql_security_check, httrack_mirror |"""
+| quick | wafw00f_scan, analyze_headers, test_cors, ssl_tls_check, whatweb_scan |
+| normal | + ffuf_fuzz, feroxbuster_scan, katana_crawl, nuclei_scan, nikto_scan |
+| deep | + sqlmap_scan, xss_scan, commix_scan, crlfuzz_scan, arjun_discover, graphql_security_check, httrack_mirror |"""
 
 
 def go_stealth(proxy_url: str = "") -> str:
@@ -297,21 +302,23 @@ def map_network(network: str) -> str:
     """
     return f"""# Map Network: {network}
 
-## Phase 1 — Fast Host Discovery (Masscan)
-1. `masscan_scan(target="{network}", ports="0-65535", rate=1000)` — rapid port sweep
-   - Masscan is 1000x faster than Nmap for large ranges
-   - Output: list of open ports per host
+## Phase 1 — Fast Port Discovery
+1. `rustscan_scan(target="{network}", ports="1-65535")` — ultra-fast full port scan (seconds)
+   - RustScan scans all 65535 ports faster than Masscan on single hosts
+   - Output: open ports per host for Nmap follow-up
+2. `masscan_scan(target="{network}", ports="0-65535", rate=1000)` — parallel sweep for large /16+ ranges
+   - Use for large CIDR ranges where RustScan is too slow
    - Rate 1000 = balanced (increase for speed, decrease for stealth)
 
 ## Phase 2 — Service Detection (Nmap)
-2. `nmap_scan(target="{network}", scan_type="version", timing="T4")` — service fingerprint
-   - Focuses on hosts/ports found by Masscan
+3. `nmap_scan(target="{network}", scan_type="version", timing="T4")` — service fingerprint
+   - Focuses on hosts/ports found in Phase 1
    - Detects: service versions, software, potential CVEs
-3. `nmap_scan(target="{network}", scan_type="syn", ports="1-1024,8080,8443,8888")` — top ports
+4. `nmap_scan(target="{network}", scan_type="syn", ports="1-1024,8080,8443,8888")` — top ports
    - OS fingerprinting: add `-O` flag if root access available
 
 ## Phase 3 — DNS Reverse Resolution
-4. `dns_enumerate(domain="{network.split("/")[0]}", record_types=["PTR"])` — reverse DNS
+5. `dns_enumerate(domain="{network.split("/")[0]}", record_types=["PTR"])` — reverse DNS
    - Maps IPs to hostnames for target context
    - Reveals internal naming conventions (dev-, prod-, db-, etc.)
 
@@ -326,8 +333,13 @@ def map_network(network: str) -> str:
 - **Network Devices**: SNMP 161, Telnet 23, Cisco 443/8443
 
 ### Priority Targets
-5. `cve_search(query="<detected-software> <version>")` — check CVEs for found services
-6. `searchsploit_query(query="<service> <version>")` — available exploits
+6. `cve_search(query="<detected-software> <version>")` — check CVEs for found services
+7. `searchsploit_query(query="<service> <version>")` — available exploits
+
+### Network Device Enumeration (if SNMP port 161 found)
+8. `snmpwalk_scan(target="<network-device-ip>", community="public", version="2c")` — SNMP enumeration
+   - Reveals: hostname, OS, interfaces, routing table, ARP cache, connected devices
+   - Try community strings: public, private, community, snmp, manager
 
 ## Attack Surface Summary Template
 ```
