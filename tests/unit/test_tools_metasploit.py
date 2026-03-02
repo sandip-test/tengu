@@ -998,8 +998,8 @@ class TestPollForSession:
             "1": {"type": "shell", "exploit_uuid": "different-uuid"},
         }
 
-        # Advance time beyond _EXPLOIT_SESSION_POLL_TIMEOUT (10.0s) immediately
-        monotonic_values = iter([0.0, 11.0])
+        # Advance time beyond _EXPLOIT_SESSION_POLL_TIMEOUT (30.0s) immediately
+        monotonic_values = iter([0.0, 31.0])
 
         with (
             patch("tengu.tools.exploit.metasploit.time.monotonic", side_effect=monotonic_values),
@@ -1017,7 +1017,7 @@ class TestPollForSession:
         mock_client.sessions.list = MagicMock(side_effect=Exception("RPC error"))
 
         # Advance time beyond timeout so the loop exits after the first failed iteration
-        monotonic_values = iter([0.0, 11.0])
+        monotonic_values = iter([0.0, 31.0])
 
         with (
             patch("tengu.tools.exploit.metasploit.time.monotonic", side_effect=monotonic_values),
