@@ -29,6 +29,7 @@ john = ""
 hashcat = ""
 searchsploit = ""
 metasploit_rpc = "https://tengu-msf:55553"
+setoolkit = ""
 
 [tools.defaults]
 nmap_timing = "T3"

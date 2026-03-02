@@ -26,6 +26,7 @@ john = ""
 hashcat = ""
 searchsploit = ""
 metasploit_rpc = "https://127.0.0.1:55553"
+setoolkit = ""
 
 [tools.defaults]
 nmap_timing = "T3"

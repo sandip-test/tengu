@@ -66,6 +66,9 @@ _TOOL_CATALOG: list[dict[str, str]] = [
     {"name": "aircrack-ng", "category": "wireless"},
     {"name": "airodump-ng", "category": "wireless"},
     {"name": "airmon-ng", "category": "wireless"},
+    # Social Engineering
+    {"name": "setoolkit", "category": "social"},
+    {"name": "seautomate", "category": "social"},
     # Stealth
     {"name": "tor", "category": "stealth"},
     {"name": "torsocks", "category": "stealth"},

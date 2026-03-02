@@ -48,6 +48,7 @@ from tengu.prompts.report_prompts import (
     risk_matrix,
     technical_report,
 )
+from tengu.prompts.social_engineering import social_engineering_assessment
 from tengu.prompts.stealth_prompts import opsec_checklist, stealth_assessment
 
 # Vulnerability assessment prompts
@@ -113,6 +114,11 @@ from tengu.tools.secrets.gitleaks import gitleaks_scan
 
 # New tools v0.2 — Secrets + Container + Cloud
 from tengu.tools.secrets.trufflehog import trufflehog_scan
+from tengu.tools.social.set_toolkit import (
+    set_credential_harvester,
+    set_payload_generator,
+    set_qrcode_attack,
+)
 from tengu.tools.stealth.check_anonymity import check_anonymity
 from tengu.tools.stealth.proxy_check import proxy_check
 from tengu.tools.stealth.rotate_identity import rotate_identity
@@ -165,7 +171,8 @@ mcp = FastMCP(
         "Use tools for active scanning and testing, resources for reference data, "
         "and prompts to guide complete pentest workflows. "
         "All targets must be in the configured allowlist (tengu.toml). "
-        "Destructive tools (msf_run_module, hydra_attack, impacket_kerberoast) require explicit human authorization. "
+        "Destructive tools (msf_run_module, hydra_attack, impacket_kerberoast, "
+        "set_credential_harvester, set_payload_generator) require explicit human authorization. "
         "Stealth mode: enable [stealth] in tengu.toml to route traffic through Tor/proxychains."
     ),
 )
@@ -266,6 +273,11 @@ mcp.tool()(aircrack_scan)
 
 # IaC tools (v0.2)
 mcp.tool()(checkov_scan)
+
+# Social Engineering tools (v0.3)
+mcp.tool()(set_credential_harvester)
+mcp.tool()(set_qrcode_attack)
+mcp.tool()(set_payload_generator)
 
 # Stealth tools (v0.2)
 mcp.tool()(tor_check)
@@ -672,6 +684,9 @@ mcp.prompt()(cloud_assessment)
 mcp.prompt()(bug_bounty_workflow)
 mcp.prompt()(compliance_assessment)
 mcp.prompt()(wireless_assessment)
+
+# Social Engineering prompts (v0.3)
+mcp.prompt()(social_engineering_assessment)
 
 # Quick action prompts (v0.2.1)
 mcp.prompt()(crack_wifi)
