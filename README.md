@@ -5,6 +5,10 @@
 </p>
 
 <p align="center">
+  <em>"In Japanese mythology, the Tengu is a fierce mountain spirit — master strategist, warrior, and trainer of samurai. In cybersecurity, it guides you through every phase of the hunt."</em>
+</p>
+
+<p align="center">
   <strong>From recon to report — AI-assisted pentesting in one command.</strong>
 </p>
 
@@ -227,6 +231,18 @@ START → initializer → strategist ─┬─→ executor → analyst ─┬─
 - **Human gate** interrupts execution before destructive tools (`msf_run_module`, `hydra_attack`, `impacket_kerberoast`, `sqlmap_scan` with level≥3)
 - Runs until all 7 PTES phases are covered or `--max-iterations` is reached
 - Final **Reporter** calls `correlate_findings` + `score_risk` + `generate_report`
+
+### PTES Methodology — 7 Phases
+
+| Phase | Name | What Tengu Does | Key Tools |
+|:---:|---|---|---|
+| 1 | Pre-Engagement | `validate_target` confirms scope, `check_tools` verifies readiness | `validate_target`, `check_tools` |
+| 2 | Intelligence Gathering | OSINT, DNS recon, subdomain enumeration, technology fingerprinting | `nmap`, `subfinder`, `amass`, `shodan`, `whatweb` |
+| 3 | Threat Modeling | Claude analyzes gathered intel, prioritizes attack surface, builds threat scenarios | *(AI-driven — no external tool)* |
+| 4 | Vulnerability Analysis | Template scanning, web app testing, SSL/TLS analysis, parameter fuzzing | `nuclei`, `nikto`, `ffuf`, `sqlmap`, `testssl` |
+| 5 | Exploitation | Controlled exploitation of confirmed vulnerabilities with human-in-the-loop | `msf_run_module`, `sqlmap`, `hydra`, `searchsploit` |
+| 6 | Post-Exploitation | Credential harvesting, lateral movement assessment, privilege escalation | `impacket_kerberoast`, `nxc_enum`, `enum4linux` |
+| 7 | Reporting | Correlate all findings, calculate risk scores, generate professional report | `correlate_findings`, `score_risk`, `generate_report` |
 
 ---
 
