@@ -293,7 +293,6 @@ def _parse_sqlmap_output(output: str) -> dict:
     retrieved_rows: list[str] = []
 
     in_table_listing = False
-    in_dump = False
 
     for line in output.splitlines():
         stripped = line.strip()
