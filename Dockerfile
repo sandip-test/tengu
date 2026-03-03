@@ -73,6 +73,8 @@ RUN if [ "$TENGU_TIER" = "minimal" ]; then \
     fi
 
 # ── Core tier: Essential pentesting tools (~2GB, default) ──────────────────
+# rustscan: not in Kali apt — installed via Go binary or skipped (masscan covers this)
+# dnstwist: python3-dnstwist is the correct apt package name
 RUN if [ "$TENGU_TIER" = "core" ]; then \
         apt-get update && apt-get install -y --no-install-recommends \
             python3 curl ca-certificates \
@@ -81,26 +83,31 @@ RUN if [ "$TENGU_TIER" = "core" ]; then \
             seclists testssl.sh dnsrecon theharvester cewl exploitdb httrack \
             gitleaks trivy chromium \
             amass \
-            wafw00f feroxbuster snmp dnstwist rustscan \
+            wafw00f feroxbuster snmp python3-dnstwist \
         && rm -rf /var/lib/apt/lists/*; \
     fi
 
 # ── Full tier: All tools including AD, wireless, stealth (~3GB) ─────────────
+# rustscan: not in Kali apt — use masscan as alternative
+# bloodhound: GUI app (not the python collector); bloodhound-python via pip below
+# prowler: pip-only, installed below
 RUN if [ "$TENGU_TIER" = "full" ]; then \
         apt-get update && apt-get install -y --no-install-recommends \
-            python3 curl ca-certificates \
+            python3 curl ca-certificates python3-pip \
             nmap masscan nikto sqlmap gobuster wpscan whatweb \
             hydra john hashcat \
             seclists testssl.sh dnsrecon theharvester cewl exploitdb httrack \
             gitleaks trivy chromium \
             amass \
-            wafw00f feroxbuster snmp dnstwist rustscan \
+            wafw00f feroxbuster snmp python3-dnstwist \
             enum4linux-ng netexec impacket-scripts \
-            commix smbmap responder bloodhound \
+            commix smbmap responder \
             aircrack-ng \
             tor torsocks proxychains4 socat \
-            arjun prowler \
-        && rm -rf /var/lib/apt/lists/*; \
+            arjun \
+        && pip3 install --break-system-packages bloodhound-python prowler 2>/dev/null || \
+           pip3 install bloodhound-python prowler \
+        && rm -rf /var/lib/apt/lists/* /root/.cache/pip; \
     fi
 
 # ── Copy uv and Python virtualenv from builder ──────────────────────────────
