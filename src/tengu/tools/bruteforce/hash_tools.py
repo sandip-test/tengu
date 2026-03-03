@@ -301,8 +301,8 @@ async def _crack_with_hashcat(
         "0",  # Straight/dictionary attack
         "--quiet",
         "--potfile-disable",
-        "--force",   # Required in Docker/VM environments without GPU
-        "-O",        # Optimized kernels (faster on CPU)
+        "--force",  # Required in Docker/VM environments without GPU
+        "-O",  # Optimized kernels (faster on CPU)
         hash_value,
         wordlist,
     ]
