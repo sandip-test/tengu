@@ -73,8 +73,6 @@ RUN if [ "$TENGU_TIER" = "minimal" ]; then \
     fi
 
 # ── Core tier: Essential pentesting tools (~2GB, default) ──────────────────
-# rustscan: not in Kali apt — installed via Go binary or skipped (masscan covers this)
-# dnstwist: python3-dnstwist is the correct apt package name
 RUN if [ "$TENGU_TIER" = "core" ]; then \
         apt-get update && apt-get install -y --no-install-recommends \
             python3 curl ca-certificates \
@@ -83,8 +81,17 @@ RUN if [ "$TENGU_TIER" = "core" ]; then \
             seclists testssl.sh dnsrecon theharvester cewl exploitdb httrack \
             gitleaks trivy chromium \
             amass \
-            wafw00f feroxbuster snmp python3-dnstwist \
         && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# ── Core tier: v0.3 tools (best-effort) ─────────────────────────────────────
+RUN if [ "$TENGU_TIER" = "core" ]; then \
+        apt-get update; \
+        for pkg in wafw00f feroxbuster snmp python3-dnstwist; do \
+            apt-get install -y --no-install-recommends "$pkg" \
+                || echo "WARNING: $pkg not available in apt, skipping"; \
+        done; \
+        rm -rf /var/lib/apt/lists/*; \
     fi
 
 # ── Full tier: All tools including AD, wireless, stealth (~3GB) ─────────────
@@ -99,14 +106,22 @@ RUN if [ "$TENGU_TIER" = "full" ]; then \
             seclists testssl.sh dnsrecon theharvester cewl exploitdb httrack \
             gitleaks trivy chromium \
             amass \
-            wafw00f feroxbuster snmp python3-dnstwist \
             enum4linux-ng netexec impacket-scripts \
-            commix smbmap responder \
             aircrack-ng \
             tor torsocks proxychains4 socat \
             arjun \
-        && python3 -m pip install --break-system-packages bloodhound-python prowler \
-        && rm -rf /var/lib/apt/lists/* /root/.cache/pip; \
+        && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# ── Full tier: v0.3 tools (best-effort — skip if package name differs across Kali versions) ──
+RUN if [ "$TENGU_TIER" = "full" ]; then \
+        apt-get update; \
+        for pkg in wafw00f feroxbuster snmp python3-dnstwist commix smbmap responder; do \
+            apt-get install -y --no-install-recommends "$pkg" \
+                || echo "WARNING: $pkg not available in apt, skipping"; \
+        done; \
+        python3 -m pip install --break-system-packages bloodhound-python prowler; \
+        rm -rf /var/lib/apt/lists/* /root/.cache/pip; \
     fi
 
 # ── Copy uv and Python virtualenv from builder ──────────────────────────────
