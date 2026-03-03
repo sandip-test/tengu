@@ -1,32 +1,26 @@
 # Tengu Demo Script — 10–15 min
 
-**Audiência:** Diretor de segurança
-**Alvo:** OWASP Juice Shop (`juice-shop` / `172.20.0.5`)
-**Ambiente:** Docker Compose local (`--profile lab`)
-**Modo:** Sessão limpa do Claude Code com Tengu via MCP
+**Audience:** Security Director
+**Target:** OWASP Juice Shop (`http://juice-shop:3000`)
+**Environment:** Docker Compose local (`--profile lab`)
+**Mode:** Clean Claude Code session with Tengu via MCP
 
 ---
 
-## Pré-Demo (antes de entrar na sala)
+## Pre-Demo (before entering the room)
 
 ```bash
-# 1. Subir o ambiente
+# Start the environment
 TENGU_TIER=full docker compose --profile lab up -d
 
-# 2. Aguardar serviços ficarem healthy (~30s)
+# Confirm everything is up
 docker compose ps
 
-# 3. Confirmar Juice Shop acessível
+# Verify Juice Shop is reachable
 curl -s http://juice-shop:3000/ | grep -o "OWASP Juice Shop"
-
-# 4. Confirmar Tengu healthy
-curl -s http://localhost:8000/health
-
-# 5. Verificar IP do juice-shop (para confirmar 172.20.0.5)
-docker inspect tengu-juice-shop-1 | grep '"IPAddress"'
 ```
 
-**Tengu.toml — allowed_hosts para a demo:**
+**`tengu.toml` — add the target to the allowlist:**
 ```toml
 [targets]
 allowed_hosts = ["juice-shop", "172.20.0.5"]
@@ -34,246 +28,136 @@ allowed_hosts = ["juice-shop", "172.20.0.5"]
 
 ---
 
-## Fase 0 — Setup (~1 min)
+## Phase 0 — Setup (~1 min)
 
-**Objetivo:** Mostrar que o Tengu tem controle de escopo e valida o ambiente antes de qualquer scan.
+**What to show:** scope control, available tooling.
 
-### Prompt para colar:
+**Prompt:**
 ```
-Check which pentesting tools are installed and validate that juice-shop is a reachable and allowed target.
-```
-
-### O que o Tengu faz:
-1. `check_tools` → lista ferramentas disponíveis (nmap, sqlmap, john, whatweb…)
-2. `validate_target` → confirma que `juice-shop` está na allowlist
-
-### Output esperado:
-```json
-{
-  "tools": {
-    "nmap": {"available": true, "path": "/usr/bin/nmap"},
-    "sqlmap": {"available": true, "path": "/usr/bin/sqlmap"},
-    "john": {"available": true, "path": "/usr/sbin/john"},
-    "whatweb": {"available": true, "path": "/usr/bin/whatweb"}
-  }
-}
-```
-```json
-{
-  "target": "juice-shop",
-  "allowed": true,
-  "resolved_ip": "172.20.0.5"
-}
+Check which pentesting tools are installed and validate that juice-shop is an allowed target.
 ```
 
-### Talking point:
-> "Antes de qualquer ação, o Tengu valida que o alvo está na allowlist configurada — zero scan fora do escopo."
+Claude calls `check_tools` and `validate_target` — lists available tools and confirms the target is in the allowlist before any action.
+
+> **Talking point:** "Before any scan, Tengu validates scope. Zero action outside the authorized target."
 
 ---
 
-## Fase 1 — Recon (~2 min)
+## Phase 1 — Discovery + Vulnerabilities (~5 min)
 
-**Objetivo:** Identificar serviços, stack tecnológica e superfície de ataque.
+**What to show:** Claude orchestrating a full pentest with a single prompt.
 
-### Prompt para colar:
+**Prompt:**
 ```
-Run a quick port scan on juice-shop, then fingerprint the web application on port 3000 and analyze the HTTP response headers.
-```
-
-### O que o Tengu faz:
-1. `nmap_scan` target=`juice-shop` ports=`3000,443,80` scan_type=`connect` timing=`T4`
-2. `whatweb_scan` target=`http://juice-shop:3000`
-3. `analyze_headers` target=`http://juice-shop:3000`
-
-### Output esperado (resumido):
-```
-nmap: port 3000/tcp open (http)
-
-whatweb:
-  - Node.js
-  - Express
-  - Angular
-  - X-Powered-By: Express
-
-analyze_headers:
-  - Missing: Content-Security-Policy
-  - Missing: X-Frame-Options
-  - Missing: Strict-Transport-Security
-  - X-Powered-By: Express (information disclosure)
+Use find_vulns on juice-shop
 ```
 
-### Talking point:
-> "Em segundos sabemos que é um app Node.js/Express com Angular, sem headers de segurança básicos. Isso já é um finding reportável."
+Claude follows the `find_vulns` prompt workflow:
+1. `nmap_scan` — port scan + service fingerprint (port 3000/tcp open, Node.js)
+2. `nuclei_scan` — CVE templates and misconfigurations (severity: medium, high, critical)
+3. `nikto_scan` — web server misconfigurations
+4. `analyze_headers` — missing security headers (CSP, HSTS, X-Frame-Options)
+5. `cve_search` — CVEs for the detected Node.js/Express stack
+6. `searchsploit_query` — publicly available exploits
+
+Among the findings, nuclei/nikto flags the `/rest/products/search` endpoint as suspicious.
+
+> **Talking point:** "One prompt. Claude fired 6 tools in sequence, correlated the results, and delivered prioritized findings by severity."
 
 ---
 
-## Fase 2 — SQLi Discovery (~4 min)
+## Phase 2 — SQLi: Exploitation + Dump (~6 min)
 
-**Objetivo:** Encontrar e confirmar SQL injection no endpoint de busca de produtos.
+**What to show:** moving from finding to exploitation with a natural language prompt.
 
-### Prompt para colar:
+**Prompt:**
 ```
-Test the Juice Shop product search endpoint for SQL injection vulnerabilities.
-The endpoint is: http://juice-shop:3000/rest/products/search?q=test
-```
-
-### O que o Tengu faz:
-1. `sqlmap_scan` url=`http://juice-shop:3000/rest/products/search?q=test` level=3 risk=2
-
-### Output esperado:
-```
-sqlmap v1.x — vulnerable!
-
-Parameter: q (GET)
-  Type: UNION query
-  Title: Generic UNION query (NULL) - 9 columns
-  Payload: q=test' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--
-
-Back-end DBMS: SQLite
-
-Injection confirmed: parameter 'q' is vulnerable
+The endpoint /rest/products/search?q=test looks injectable. Confirm the SQLi and dump the Users table — email, password, role.
 ```
 
-### Talking point:
-> "UNION-based SQLi confirmado. O sqlmap identificou automaticamente 9 colunas e o DBMS SQLite. Agora vamos extrair dados."
+Claude calls:
+1. `sqlmap_scan` on `http://juice-shop:3000/rest/products/search?q=test` — **UNION SQLi confirmed** (SQLite, 9 columns, parameter `q`)
+2. `sqlmap_scan` with `--dump` on the `Users` table → 22 users with email, MD5 hash, and role
 
----
-
-## Fase 3 — Data Dump (~3 min)
-
-**Objetivo:** Exfiltrar credenciais dos 22 usuários registrados.
-
-### Prompt para colar:
+Output:
 ```
-Use SQL injection on juice-shop to extract all user emails, passwords, and roles from the Users table.
-Use the vulnerable endpoint: http://juice-shop:3000/rest/products/search?q=test
-```
-
-### O que o Tengu faz:
-1. `sqlmap_scan` com `--dump` ou `--sql-query` extraindo da tabela `Users`
-
-### Output esperado:
-```
-Retrieved rows from Users table:
-
 admin@juice-sh.op | 0192023a7bbd73250516f069df18b500 | admin
 jim@juice-sh.op   | e541ca7ecf72b8d1286474fc613e5e45 | customer
-bender@juice-sh.op| 0c36e517frame...                | customer
 ...
 [22 rows total]
 ```
 
-### Talking point:
-> "22 usuários exfiltrados com email, hash MD5 e papel. Temos o hash do admin. Vamos quebrar."
+> **Talking point:** "From finding to data exfiltration in one message. No manual commands."
 
 ---
 
-## Fase 4 — Hash Crack (~2 min)
+## Phase 3 — Hash Crack (~2 min)
 
-**Objetivo:** Quebrar o hash MD5 do admin para demonstrar impacto real.
+**What to show:** real impact — from hash to plaintext password.
 
-### Prompt para colar:
+**Prompt:**
 ```
-Identify the hash type for "0192023a7bbd73250516f069df18b500" and crack it.
-```
-
-### O que o Tengu faz:
-1. `hash_identify` hash=`0192023a7bbd73250516f069df18b500`
-2. `hash_crack` hash=`0192023a7bbd73250516f069df18b500` hash_type=`md5` wordlist=`rockyou`
-
-### Output esperado:
-```json
-// hash_identify
-{
-  "possible_types": ["MD5", "MD5(Unix)", "MD5(APR)"],
-  "most_likely": "MD5"
-}
-
-// hash_crack
-{
-  "hash": "0192023a7bbd73250516f069df18b500",
-  "cracked": true,
-  "plaintext": "admin123",
-  "tool": "john",
-  "time_seconds": 3.2
-}
+Identify and crack this hash from the admin account: 0192023a7bbd73250516f069df18b500
 ```
 
-### Talking point:
-> "Em 3 segundos: admin@juice-sh.op / admin123. Acesso total ao painel administrativo. Impacto: crítico."
+Claude calls:
+1. `hash_identify` → MD5 confirmed
+2. `hash_crack` with rockyou → **`admin123`** in ~3 seconds
+
+> **Talking point:** "admin@juice-sh.op / admin123. Full access to the admin panel. The full cycle — discovery, exploitation, exfiltration, password cracking — driven by natural language."
 
 ---
 
-## Encerramento (~1 min)
+## Wrap-up (~1 min, if time allows)
 
-### Prompt de relatório (opcional, se sobrar tempo):
+**Prompt:**
 ```
-Generate an executive summary report of the findings from this assessment of juice-shop.
+Generate an executive summary report of all findings from this assessment.
 ```
 
-### Pontos-chave para mencionar:
-- **Zero configuração manual** — o Claude orquestrou todas as ferramentas automaticamente
-- **Auditoria completa** — cada ação gravada em `logs/tengu-audit.log`
-- **Controle de escopo** — allowlist impede scans acidentais fora do alvo
-- **Extensível** — 83 ferramentas MCP, qualquer tool do mercado pode ser integrada
+Claude calls `generate_report` with the accumulated findings and delivers a structured report with severity ratings, CVSS scores, and remediation recommendations.
 
 ---
 
-## Troubleshooting
+## Timing Reference
 
-### juice-shop não responde
+| Phase | Duration | Cumulative |
+|-------|----------|------------|
+| 0. Setup | ~1 min | 1 min |
+| 1. find_vulns | ~5 min | 6 min |
+| 2. SQLi + Dump | ~6 min | 12 min |
+| 3. Hash Crack | ~2 min | 14 min |
+| Buffer / Q&A | ~1 min | 15 min |
+
+---
+
+## Quick Troubleshooting
+
+**`sqlmap` does not detect injection:**
+Increase the level directly in the prompt:
+```
+Run sqlmap_scan on http://juice-shop:3000/rest/products/search?q=test with level=5 and risk=3
+```
+
+**`Target not allowed` on start:**
 ```bash
-docker compose --profile lab ps
-docker compose --profile lab logs juice-shop --tail=20
-# Se necessário:
-docker compose --profile lab restart juice-shop
+TENGU_ALLOWED_HOSTS=juice-shop,172.20.0.5 docker compose up -d
 ```
 
-### sqlmap retorna "not injectable"
-- Confirmar que o Juice Shop está rodando: `curl http://juice-shop:3000/rest/products/search?q=apple`
-- Aumentar nível: adicionar `level=5 risk=3` no prompt
-- Alternativa: usar URL com IP direto `http://172.20.0.5:3000/rest/products/search?q=test`
+**Claude cannot see Tengu tools:**
+Check in Claude Code: `/mcp` → should show `tengu (connected)`
 
-### hash_crack não acha senha
-- O wordlist padrão pode não ter `admin123` — verificar se `rockyou.txt` está disponível:
-  ```bash
-  docker exec <tengu-container> ls /usr/share/wordlists/rockyou.txt
-  ```
-- Alternativa: usar `hash_crack` com `wordlist=/usr/share/wordlists/rockyou.txt`
-
-### Target not allowed
-- Verificar `tengu.toml` em produção:
-  ```bash
-  docker exec <tengu-container> cat /app/tengu.toml | grep allowed_hosts
-  ```
-- Variável de ambiente: `TENGU_ALLOWED_HOSTS=juice-shop,172.20.0.5`
-
-### Claude não encontra as tools Tengu
-- Confirmar MCP conectado: `/mcp` no Claude Code, deve mostrar `tengu (connected)`
-- Se SSE: verificar URL no `~/.claude.json`
+**`hash_crack` does not find the password:**
+```bash
+docker exec <tengu-container> ls /usr/share/wordlists/rockyou.txt
+```
 
 ---
 
-## Checklist Pré-Demo
+## Pre-Demo Checklist
 
-- [ ] Docker Compose com `--profile lab` rodando
-- [ ] `tengu.toml` com `allowed_hosts = ["juice-shop", "172.20.0.5"]`
-- [ ] Tengu acessível em `http://localhost:8000/health`
-- [ ] Juice Shop acessível em `http://juice-shop:3000`
-- [ ] Claude Code com MCP tengu `(connected)`
-- [ ] Sessão limpa aberta (`claude` ou nova janela)
-- [ ] Roteiro impresso ou em segunda tela
-- [ ] Wordlist rockyou.txt disponível no container
-
----
-
-## Timing de Referência
-
-| Fase | Início | Duração | Acumulado |
-|------|--------|---------|-----------|
-| 0. Setup | 0:00 | ~1 min | 1 min |
-| 1. Recon | 1:00 | ~2 min | 3 min |
-| 2. SQLi Discovery | 3:00 | ~4 min | 7 min |
-| 3. Data Dump | 7:00 | ~3 min | 10 min |
-| 4. Hash Crack | 10:00 | ~2 min | 12 min |
-| Buffer / Perguntas | 12:00 | ~3 min | 15 min |
+- [ ] `docker compose --profile lab up -d` running
+- [ ] `tengu.toml` with `allowed_hosts = ["juice-shop", "172.20.0.5"]`
+- [ ] `http://juice-shop:3000` accessible in the browser
+- [ ] Claude Code: `/mcp` shows `tengu (connected)`
+- [ ] Clean session open (`claude` in a new window)
