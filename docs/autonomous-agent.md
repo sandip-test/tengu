@@ -1,5 +1,9 @@
 # Autonomous Pentest Agent
 
+<p align="center">
+  <img src="../assets/tengo-agent-diagram.png" alt="Tengu Agent Diagram" width="800"/>
+</p>
+
 Tengu includes an optional autonomous agent (`autonomous_tengu.py`) that runs a
 full penetration test without human intervention at every step. You give it a
 target, it follows the PTES methodology across 7 phases, and at the end it
