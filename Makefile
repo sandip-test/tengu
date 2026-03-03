@@ -139,6 +139,12 @@ docker-agent-sonnet: ## Run autonomous agent with claude-sonnet-4-6 (default, ba
 docker-agent-logs: ## Tail logs from the agent and tengu server (useful when agent runs in background)
 	docker compose logs -f tengu tengu-agent
 
+docker-reports: ## List reports generated inside Docker (stored in tengu-output volume)
+	docker run --rm -v tengu-output:/app/output alpine ls -lh /app/output/
+
+docker-report: ## Cat a specific report (REPORT=filename.md)
+	docker run --rm -v tengu-output:/app/output alpine cat /app/output/$(REPORT)
+
 docker-clean: ## Remove Docker images and volumes
 	docker compose down -v --rmi local
 
