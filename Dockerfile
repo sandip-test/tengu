@@ -30,12 +30,19 @@ ENV PATH="${GOPATH}/bin:/usr/local/go/bin:${PATH}"
 
 RUN mkdir -p /root/go/bin && \
     if [ "$TENGU_TIER" = "core" ] || [ "$TENGU_TIER" = "full" ]; then \
-        go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
-        go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
-        go install github.com/ffuf/ffuf/v2@latest && \
-        go install github.com/hahwul/dalfox/v2@latest && \
-        go install github.com/sensepost/gowitness@latest && \
-        go install github.com/haccer/subjack@latest; \
+        for pkg in \
+            "github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.7" \
+            "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.6.7" \
+            "github.com/ffuf/ffuf/v2@v2.1.0" \
+            "github.com/hahwul/dalfox/v2@v2.9.2" \
+            "github.com/sensepost/gowitness@latest" \
+            "github.com/projectdiscovery/katana/cmd/katana@v1.1.0" \
+            "github.com/projectdiscovery/httpx/cmd/httpx@v1.6.9" \
+            "github.com/projectdiscovery/dnsx/cmd/dnsx@v1.2.1" \
+            "github.com/lc/crlfuzz@v1.4.1"; \
+        do \
+            go install "$pkg" || echo "WARNING: failed to install $pkg, skipping"; \
+        done; \
     fi
 
 # Cache Python dependencies separately from source code
@@ -77,10 +84,23 @@ RUN if [ "$TENGU_TIER" = "core" ]; then \
         && rm -rf /var/lib/apt/lists/*; \
     fi
 
+# ── Core tier: v0.3 tools (best-effort) ─────────────────────────────────────
+RUN if [ "$TENGU_TIER" = "core" ]; then \
+        apt-get update; \
+        for pkg in wafw00f feroxbuster snmp python3-dnstwist; do \
+            apt-get install -y --no-install-recommends "$pkg" \
+                || echo "WARNING: $pkg not available in apt, skipping"; \
+        done; \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
+
 # ── Full tier: All tools including AD, wireless, stealth (~3GB) ─────────────
+# rustscan: not in Kali apt — use masscan as alternative
+# bloodhound: GUI app (not the python collector); bloodhound-python via pip below
+# prowler: pip-only, installed below
 RUN if [ "$TENGU_TIER" = "full" ]; then \
         apt-get update && apt-get install -y --no-install-recommends \
-            python3 curl ca-certificates \
+            python3 python3-pip curl ca-certificates \
             nmap masscan nikto sqlmap gobuster wpscan whatweb \
             hydra john hashcat \
             seclists testssl.sh dnsrecon theharvester cewl exploitdb httrack \
@@ -91,6 +111,17 @@ RUN if [ "$TENGU_TIER" = "full" ]; then \
             tor torsocks proxychains4 socat \
             arjun \
         && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# ── Full tier: v0.3 tools (best-effort — skip if package name differs across Kali versions) ──
+RUN if [ "$TENGU_TIER" = "full" ]; then \
+        apt-get update; \
+        for pkg in wafw00f feroxbuster snmp python3-dnstwist commix smbmap responder; do \
+            apt-get install -y --no-install-recommends "$pkg" \
+                || echo "WARNING: $pkg not available in apt, skipping"; \
+        done; \
+        python3 -m pip install --break-system-packages bloodhound-python prowler; \
+        rm -rf /var/lib/apt/lists/* /root/.cache/pip; \
     fi
 
 # ── Copy uv and Python virtualenv from builder ──────────────────────────────
@@ -119,8 +150,8 @@ WORKDIR /app
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=15s --start-period=30s --retries=3 \
-    CMD /bin/sh -c "curl -s --max-time 5 -o /dev/null -w '%{http_code}' http://localhost:8000/sse | grep -q 200"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -sf http://localhost:8000/health || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["--transport", "sse", "--host", "0.0.0.0", "--port", "8000"]
