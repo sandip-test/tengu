@@ -9,6 +9,8 @@ allowed_hosts = [
     "172.16.0.0/12",    # Docker bridge + custom networks (172.17-20.x.x)
     "192.168.0.0/16",   # Host network / lab ranges
     "10.0.0.0/8",       # VPN / cloud lab
+    "juice-shop",       # Lab target (docker compose --profile lab)
+    "dvwa",             # Lab target (docker compose --profile lab)
 ]
 
 # Always blocked, even if listed in allowed_hosts
