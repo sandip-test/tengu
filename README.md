@@ -473,6 +473,30 @@ Static reference data loaded by Claude during engagements.
 
 ---
 
+## Configuration Files
+
+Tengu uses three configuration files. Editing the wrong one is the most common source
+of confusion when switching between local and Docker workflows.
+
+| File | When to use | What it controls |
+|------|-------------|------------------|
+| `tengu.toml` (root) | Running locally: `uv run tengu`, `uv run python autonomous_tengu.py` | MCP server config: `allowed_hosts`, tool paths, rate limits, stealth |
+| `docker/tengu.toml` | Running via Docker: `make docker-up`, `make docker-agent` | Same settings as root, but pre-configured for Docker networking (`172.16.0.0/12`, service DNS aliases). Baked into the image at build time — **rebuild required** after changes (`make docker-rebuild-tengu`) |
+| `.env` | Both local and Docker | Secrets and runtime vars: `ANTHROPIC_API_KEY`, `TENGU_AGENT_TARGET`, `TENGU_AGENT_MODEL`, `TENGU_AGENT_MAX_TOKENS`, etc. Read by `docker compose` and `load_dotenv()` |
+| `.env.example` | Reference only | Template listing all available environment variables |
+
+**Quick config for copilot mode (local):** edit `tengu.toml` at the project root —
+add your target to `[targets] allowed_hosts`.
+
+**Quick config for agent mode (Docker):** edit `docker/tengu.toml`, then run
+`make docker-rebuild-tengu` before `make docker-agent`.
+
+> **Common pitfall:** if scans fail with `TargetNotAllowedError` inside Docker, you
+> probably edited `tengu.toml` (root) instead of `docker/tengu.toml`. Docker uses its
+> own copy baked into the image. After editing, run `make docker-rebuild-tengu`.
+
+---
+
 ## Safety by Design
 
 Tengu is built as a **force multiplier for human pentesters**, not an autonomous attack tool.
