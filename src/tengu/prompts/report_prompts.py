@@ -279,6 +279,64 @@ Retest Results:
 """
 
 
+def save_report(
+    target: str,
+    client_name: str = "",
+    report_type: str = "full",
+    output_format: str = "markdown",
+) -> str:
+    """Save a pentest report to the Docker output volume for the report viewer.
+
+    Collects findings from the current session and saves the report to
+    /app/output/ so it can be browsed with `make docker-report-view`.
+
+    Args:
+        target: Target host or application (used to build the filename).
+        client_name: Client or organization name (defaults to target if empty).
+        report_type: Report type: 'full', 'executive', 'technical', or 'risk_matrix'.
+        output_format: Output format: 'markdown' or 'html'.
+    """
+    import datetime
+
+    date = datetime.date.today().isoformat()
+    safe_target = target.replace("://", "-").replace("/", "-").strip("-")
+    ext = "html" if output_format == "html" else "md"
+    filename = f"pentest-{safe_target}-{date}.{ext}"
+    output_path = f"/app/output/{filename}"
+    resolved_client = client_name or target
+
+    return f"""Collect all findings from this session and generate a {report_type} pentest report
+saved to the Docker output volume.
+
+## Instructions
+
+1. Gather all findings discovered during this session — look through the conversation
+   history for tool outputs from nmap, nikto, nuclei, sqlmap, gobuster, ffuf, hydra,
+   correlate_findings, and any other tools that produced security findings.
+
+2. Call `correlate_findings` with the collected findings to get normalized finding objects
+   and an overall risk score.
+
+3. Call `generate_report` with these exact parameters:
+   - client_name="{resolved_client}"
+   - engagement_type="blackbox"
+   - scope=["{target}"]
+   - findings=(the normalized findings list from step 2)
+   - report_type="{report_type}"
+   - output_format="{output_format}"
+   - output_path="{output_path}"
+   - Write a concise executive_summary (2-3 paragraphs, business-focused)
+   - Write a forward-looking conclusion paragraph
+
+4. Confirm that the report was saved by reporting the output path.
+
+The report will be immediately available in `make docker-report-view` at:
+  http://localhost:8888 → {filename}
+
+Generate and save the report now.
+"""
+
+
 def _format_findings_for_prompt(findings: list[dict]) -> str:
     """Format findings for inclusion in prompts."""
     if not findings:

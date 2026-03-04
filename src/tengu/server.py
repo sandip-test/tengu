@@ -49,6 +49,7 @@ from tengu.prompts.report_prompts import (
     remediation_plan,
     retest_report,
     risk_matrix,
+    save_report,
     technical_report,
 )
 from tengu.prompts.social_engineering import social_engineering_assessment
@@ -736,6 +737,7 @@ mcp.prompt()(remediation_plan)
 mcp.prompt()(finding_detail)
 mcp.prompt()(risk_matrix)
 mcp.prompt()(retest_report)
+mcp.prompt()(save_report)
 
 # New prompts (v0.2)
 mcp.prompt()(osint_investigation)
