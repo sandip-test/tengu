@@ -286,8 +286,8 @@ flowchart LR
     subgraph initializer
         I1[ptes_phases]
         I2[available_tools]
-        I3[current_phase = 2]
-        I4[phase_completed = {}]
+        I3[current_phase]
+        I4[phase_completed]
     end
 
     subgraph strategist
