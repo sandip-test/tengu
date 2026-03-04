@@ -52,7 +52,8 @@ def _host_matches_pattern(host: str, pattern: str) -> bool:
             if "/" in host:
                 try:
                     target_net = ipaddress.ip_network(host, strict=False)
-                    return target_net.subnet_of(network)
+                    if type(target_net) is type(network):
+                        return target_net.subnet_of(network)  # type: ignore[arg-type]
                 except ValueError:
                     pass
                 return False
