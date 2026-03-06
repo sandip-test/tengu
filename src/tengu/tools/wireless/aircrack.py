@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import re
 import time
@@ -11,6 +10,8 @@ from pathlib import Path
 import structlog
 from fastmcp import Context
 
+from tengu.exceptions import ScanTimeoutError
+from tengu.executor.process import run_command
 from tengu.executor.registry import resolve_tool_path
 from tengu.security.audit import get_audit_logger
 from tengu.security.rate_limiter import rate_limited
@@ -78,15 +79,12 @@ async def aircrack_scan(
         start = time.monotonic()
 
         try:
-            proc = await asyncio.create_subprocess_exec(
-                *args,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-
-            await asyncio.sleep(scan_time)
-            proc.terminate()
-            await proc.communicate()
+            # airodump-ng runs indefinitely; scan_time used as timeout so the process
+            # is killed after the capture window, which is the intended behavior.
+            await run_command(args, timeout=scan_time)
+        except ScanTimeoutError:
+            # Expected — airodump-ng does not exit on its own; CSV data is on disk.
+            pass
         except Exception as exc:
             await audit.log_tool_call(
                 "airodump-ng", safe_interface, params, result="failed", error=str(exc)

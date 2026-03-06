@@ -53,7 +53,7 @@ async def whois_lookup(
 
     # python-whois is synchronous — run in thread pool to avoid blocking
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         w = await loop.run_in_executor(None, lambda: whois.whois(target))
     except Exception as exc:
         await audit.log_tool_call("whois_lookup", target, params, result="failed", error=str(exc))

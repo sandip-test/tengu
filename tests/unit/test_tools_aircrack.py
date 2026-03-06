@@ -6,6 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from tengu.exceptions import ScanTimeoutError
+
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
@@ -30,13 +32,6 @@ def _make_audit_mock() -> MagicMock:
     audit = MagicMock()
     audit.log_tool_call = AsyncMock()
     return audit
-
-
-def _make_proc_mock() -> MagicMock:
-    proc = MagicMock()
-    proc.terminate = MagicMock()
-    proc.communicate = AsyncMock(return_value=(b"", b""))
-    return proc
 
 
 @pytest.fixture
@@ -85,14 +80,15 @@ async def _run_aircrack(ctx, interface="wlan0mon", scan_time=30, csv_content=Non
 
     rate_limited_mock = _make_rate_limited_mock()
     audit_mock = _make_audit_mock()
-    proc_mock = _make_proc_mock()
 
     with (
         patch(f"{_MOD}.get_audit_logger", return_value=audit_mock),
         patch(f"{_MOD}.rate_limited", rate_limited_mock),
         patch(f"{_MOD}.resolve_tool_path", return_value="/usr/sbin/airodump-ng"),
-        patch("asyncio.create_subprocess_exec", return_value=proc_mock) as mock_exec,
-        patch("asyncio.sleep", new=AsyncMock(return_value=None)),
+        patch(
+            f"{_MOD}.run_command",
+            new=AsyncMock(side_effect=ScanTimeoutError("airodump-ng", scan_time)),
+        ) as mock_run_cmd,
         patch(f"{_MOD}.Path") as mock_path_cls,
     ):
         # Configure Path mock for the CSV file
@@ -106,7 +102,7 @@ async def _run_aircrack(ctx, interface="wlan0mon", scan_time=30, csv_content=Non
         mock_path_cls.return_value = mock_csv
 
         result = await aircrack_scan(ctx, interface=interface, scan_time=scan_time)
-        return result, mock_exec, proc_mock, mock_csv
+        return result, mock_run_cmd, None, mock_csv
 
 
 # ---------------------------------------------------------------------------
@@ -146,19 +142,20 @@ class TestAircrackInterfaceSanitization:
 
 class TestAircrackScanTimeClamping:
     async def test_scan_time_clamped_min(self, ctx):
-        # scan_time=1 is below minimum 5; asyncio.sleep should be called with 5
+        # scan_time=1 is below minimum 5; run_command should be called with timeout=5
         from tengu.tools.wireless.aircrack import aircrack_scan
 
         rate_limited_mock = _make_rate_limited_mock()
         audit_mock = _make_audit_mock()
-        proc_mock = _make_proc_mock()
 
         with (
             patch(f"{_MOD}.get_audit_logger", return_value=audit_mock),
             patch(f"{_MOD}.rate_limited", rate_limited_mock),
             patch(f"{_MOD}.resolve_tool_path", return_value="/usr/sbin/airodump-ng"),
-            patch("asyncio.create_subprocess_exec", return_value=proc_mock),
-            patch("asyncio.sleep", new=AsyncMock(return_value=None)) as mock_sleep,
+            patch(
+                f"{_MOD}.run_command",
+                new=AsyncMock(side_effect=ScanTimeoutError("airodump-ng", 5)),
+            ) as mock_run_cmd,
             patch(f"{_MOD}.Path") as mock_path_cls,
         ):
             mock_csv = MagicMock()
@@ -166,23 +163,25 @@ class TestAircrackScanTimeClamping:
             mock_path_cls.return_value = mock_csv
             ctx2 = _make_ctx()
             await aircrack_scan(ctx2, interface="wlan0", scan_time=1)
-            # Sleep should be called with the clamped value (5)
-            mock_sleep.assert_called_once_with(5)
+            # run_command should be called with the clamped timeout (5)
+            _, kwargs = mock_run_cmd.call_args
+            assert kwargs.get("timeout") == 5
 
     async def test_scan_time_clamped_max(self, ctx):
-        # scan_time=600 is above maximum 300; asyncio.sleep should be called with 300
+        # scan_time=600 is above maximum 300; run_command should be called with timeout=300
         from tengu.tools.wireless.aircrack import aircrack_scan
 
         rate_limited_mock = _make_rate_limited_mock()
         audit_mock = _make_audit_mock()
-        proc_mock = _make_proc_mock()
 
         with (
             patch(f"{_MOD}.get_audit_logger", return_value=audit_mock),
             patch(f"{_MOD}.rate_limited", rate_limited_mock),
             patch(f"{_MOD}.resolve_tool_path", return_value="/usr/sbin/airodump-ng"),
-            patch("asyncio.create_subprocess_exec", return_value=proc_mock),
-            patch("asyncio.sleep", new=AsyncMock(return_value=None)) as mock_sleep,
+            patch(
+                f"{_MOD}.run_command",
+                new=AsyncMock(side_effect=ScanTimeoutError("airodump-ng", 300)),
+            ) as mock_run_cmd,
             patch(f"{_MOD}.Path") as mock_path_cls,
         ):
             mock_csv = MagicMock()
@@ -190,22 +189,24 @@ class TestAircrackScanTimeClamping:
             mock_path_cls.return_value = mock_csv
             ctx2 = _make_ctx()
             await aircrack_scan(ctx2, interface="wlan0", scan_time=600)
-            mock_sleep.assert_called_once_with(300)
+            _, kwargs = mock_run_cmd.call_args
+            assert kwargs.get("timeout") == 300
 
     async def test_scan_time_within_range_used(self, ctx):
-        # scan_time=30 is within [5, 300]; asyncio.sleep should be called with 30
+        # scan_time=30 is within [5, 300]; run_command should be called with timeout=30
         from tengu.tools.wireless.aircrack import aircrack_scan
 
         rate_limited_mock = _make_rate_limited_mock()
         audit_mock = _make_audit_mock()
-        proc_mock = _make_proc_mock()
 
         with (
             patch(f"{_MOD}.get_audit_logger", return_value=audit_mock),
             patch(f"{_MOD}.rate_limited", rate_limited_mock),
             patch(f"{_MOD}.resolve_tool_path", return_value="/usr/sbin/airodump-ng"),
-            patch("asyncio.create_subprocess_exec", return_value=proc_mock),
-            patch("asyncio.sleep", new=AsyncMock(return_value=None)) as mock_sleep,
+            patch(
+                f"{_MOD}.run_command",
+                new=AsyncMock(side_effect=ScanTimeoutError("airodump-ng", 30)),
+            ) as mock_run_cmd,
             patch(f"{_MOD}.Path") as mock_path_cls,
         ):
             mock_csv = MagicMock()
@@ -213,7 +214,8 @@ class TestAircrackScanTimeClamping:
             mock_path_cls.return_value = mock_csv
             ctx2 = _make_ctx()
             await aircrack_scan(ctx2, interface="wlan0", scan_time=30)
-            mock_sleep.assert_called_once_with(30)
+            _, kwargs = mock_run_cmd.call_args
+            assert kwargs.get("timeout") == 30
 
 
 # ---------------------------------------------------------------------------
@@ -223,18 +225,21 @@ class TestAircrackScanTimeClamping:
 
 class TestAircrackSubprocess:
     async def test_subprocess_called_with_airodump(self, ctx):
-        _, mock_exec, _, _ = await _run_aircrack(ctx, interface="wlan0mon")
-        mock_exec.assert_called_once()
-        call_args = mock_exec.call_args[0]
+        _, mock_run_cmd, _, _ = await _run_aircrack(ctx, interface="wlan0mon")
+        mock_run_cmd.assert_called_once()
+        call_args = mock_run_cmd.call_args[0][0]  # first positional arg is the args list
         assert "/usr/sbin/airodump-ng" in call_args
 
-    async def test_proc_terminate_called_after_scan_time(self, ctx):
-        _, _, proc_mock, _ = await _run_aircrack(ctx, interface="wlan0mon")
-        proc_mock.terminate.assert_called_once()
+    async def test_run_command_called_with_timeout_for_termination(self, ctx):
+        # Termination is handled by run_command's timeout mechanism
+        _, mock_run_cmd, _, _ = await _run_aircrack(ctx, interface="wlan0mon")
+        mock_run_cmd.assert_called_once()
+        _, kwargs = mock_run_cmd.call_args
+        assert "timeout" in kwargs
 
-    async def test_proc_communicate_called(self, ctx):
-        _, _, proc_mock, _ = await _run_aircrack(ctx)
-        proc_mock.communicate.assert_called_once()
+    async def test_run_command_called(self, ctx):
+        _, mock_run_cmd, _, _ = await _run_aircrack(ctx)
+        mock_run_cmd.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

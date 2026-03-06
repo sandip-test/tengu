@@ -67,7 +67,7 @@ async def _call_whois(mocks, target="example.com", whois_obj=None, whois_raises=
         patch(f"{TOOL_MODULE}.sanitize_target", side_effect=lambda t: t),
         patch(f"{TOOL_MODULE}.asyncio") as mock_asyncio,
     ):
-        mock_asyncio.get_event_loop.return_value = fake_loop
+        mock_asyncio.get_running_loop.return_value = fake_loop
         return await whois_lookup(mocks["ctx"], target)
 
 

@@ -90,6 +90,7 @@ async def zap_spider(
         await audit.log_target_blocked("zap_spider", url, str(exc))
         raise
 
+    await audit.log_tool_call("zap_spider", url, params, result="started")
     await ctx.report_progress(0, 5, f"Starting ZAP spider on {url}...")
 
     # Start spider
@@ -186,6 +187,7 @@ async def zap_active_scan(
         await audit.log_target_blocked("zap_active_scan", url, str(exc))
         raise
 
+    await audit.log_tool_call("zap_active_scan", url, params, result="started")
     await ctx.report_progress(0, 5, f"Starting ZAP active scan on {url}...")
 
     scan_params: dict[str, str] = {"url": url}
@@ -257,6 +259,10 @@ async def zap_get_alerts(
     Returns:
         List of ZAP alerts with risk level, description, solution, and evidence.
     """
+    audit = get_audit_logger()
+    alert_target = url or "zap-instance"
+    audit_params: dict[str, object] = {"url": url, "risk_level": risk_level, "max_alerts": max_alerts}
+    await audit.log_tool_call("zap_get_alerts", alert_target, audit_params, result="started")
     await ctx.report_progress(0, 2, "Fetching ZAP alerts...")
 
     alert_params: dict[str, str | int] = {
@@ -287,6 +293,7 @@ async def zap_get_alerts(
     except ZAPConnectionError as exc:
         return {"tool": "zap_get_alerts", "error": str(exc)}
 
+    await audit.log_tool_call("zap_get_alerts", alert_target, audit_params, result="completed")
     await ctx.report_progress(2, 2, "Done")
 
     # Structure alerts

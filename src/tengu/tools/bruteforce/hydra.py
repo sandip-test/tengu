@@ -173,11 +173,15 @@ def _parse_hydra_output(output: str) -> list[dict]:
             re.IGNORECASE,
         )
         if m:
+            pw = m.group(2)
+            masked = pw[:2] + "***" + pw[-1:] if len(pw) > 3 else "***"
             credentials.append(
                 {
                     "username": m.group(1),
-                    "password": m.group(2),
-                    "raw_line": line.strip(),
+                    "password": masked,
+                    "password_length": len(pw),
+                    "found": True,
+                    "raw_line": "[credential found - see audit log]",
                 }
             )
 
