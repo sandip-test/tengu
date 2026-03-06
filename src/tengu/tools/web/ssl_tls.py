@@ -109,7 +109,7 @@ async def ssl_tls_check(
     await ctx.report_progress(1, 5, "Scanning SSL/TLS protocols and ciphers...")
 
     # sslyze is synchronous — run in thread pool
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     try:
         scan_result_raw = await asyncio.wait_for(

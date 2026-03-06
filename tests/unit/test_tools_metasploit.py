@@ -232,7 +232,16 @@ class TestMsfRunModule:
             captured_options.update(opts)
             return run_result
 
-        with patch("tengu.tools.exploit.metasploit._run_module", side_effect=fake_run):
+        mock_allowlist = MagicMock()
+        mock_allowlist.check.return_value = None
+
+        with (
+            patch("tengu.tools.exploit.metasploit._run_module", side_effect=fake_run),
+            patch(
+                "tengu.tools.exploit.metasploit.make_allowlist_from_config",
+                return_value=mock_allowlist,
+            ),
+        ):
             from tengu.tools.exploit.metasploit import msf_run_module
 
             await msf_run_module(ctx, "exploit/test", options={"RH;OSTS": "192.168.1.1"})
@@ -243,7 +252,7 @@ class TestMsfRunModule:
 
     @pytest.mark.asyncio
     async def test_options_values_truncated_to_500(self):
-        """Option values longer than 500 chars are truncated."""
+        """Option values longer than 500 chars are truncated (uses non-target key)."""
         ctx = _make_ctx()
         long_value = "A" * 1000
         run_result = {"success": True, "job_id": 1, "uuid": "abc", "raw": "{}"}
@@ -257,9 +266,10 @@ class TestMsfRunModule:
         with patch("tengu.tools.exploit.metasploit._run_module", side_effect=fake_run):
             from tengu.tools.exploit.metasploit import msf_run_module
 
-            await msf_run_module(ctx, "exploit/test", options={"RHOSTS": long_value})
+            # Use a non-RHOSTS key so allowlist validation is not triggered
+            await msf_run_module(ctx, "exploit/test", options={"TIMEOUT": long_value})
 
-        assert len(captured_options["RHOSTS"]) == 500
+        assert len(captured_options["TIMEOUT"]) == 500
 
     @pytest.mark.asyncio
     async def test_newlines_removed_from_option_values(self):

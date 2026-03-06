@@ -215,7 +215,7 @@ class TestHydraAttack:
 
         assert result["valid_credentials_found"] >= 1
         assert result["credentials"][0]["username"] == "admin"
-        assert result["credentials"][0]["password"] == "secret"
+        assert result["credentials"][0]["password"] == "se***t"  # masked
 
     async def test_hydra_no_credentials_found(self, mock_ctx):
         """Output has no valid creds — credentials=[]."""
@@ -344,12 +344,12 @@ class TestParseHydraOutput:
         result = _parse_hydra_output(output)
         assert len(result) == 1
         assert result[0]["username"] == "admin"
-        assert result[0]["password"] == "secret123"
+        assert result[0]["password"] == "se***3"  # masked: se + *** + last char
 
-    def test_raw_line_preserved(self):
+    def test_raw_line_redacted(self):
         line = "[ftp][10.0.0.5:21] login: ftpuser password: p@ss"
         result = _parse_hydra_output(line)
-        assert result[0]["raw_line"] == line
+        assert result[0]["raw_line"] == "[credential found - see audit log]"
 
     def test_multiple_credentials(self):
         output = (
@@ -380,4 +380,4 @@ class TestParseHydraOutput:
         result = _parse_hydra_output(output)
         assert len(result) == 1
         assert result[0]["username"] == "root"
-        assert result[0]["password"] == "toor"
+        assert result[0]["password"] == "to***r"  # masked

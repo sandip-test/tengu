@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -36,7 +36,7 @@ class ScanResult(BaseModel):
     hosts: list[Host] = []
     raw_output: str = ""
     duration_seconds: float = 0.0
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
     error: str | None = None
 
 
@@ -44,7 +44,7 @@ class SubdomainResult(BaseModel):
     domain: str
     subdomains: list[str] = []
     tool: str = "subfinder"
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 class DNSRecord(BaseModel):
@@ -57,7 +57,7 @@ class DNSRecord(BaseModel):
 class DNSResult(BaseModel):
     domain: str
     records: list[DNSRecord] = []
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 class WhoisResult(BaseModel):
@@ -71,7 +71,7 @@ class WhoisResult(BaseModel):
     org: str | None = None
     country: str | None = None
     raw: str = ""
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 # ============================================================
@@ -92,7 +92,7 @@ class HeaderAnalysisResult(BaseModel):
     headers: list[SecurityHeader] = []
     score: int = 0  # 0-100
     grade: str = "F"  # A+, A, B, C, D, F
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 class CORSResult(BaseModel):
@@ -101,7 +101,7 @@ class CORSResult(BaseModel):
     issues: list[str] = []
     allow_origin: str | None = None
     allow_credentials: bool = False
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 class SSLResult(BaseModel):
@@ -114,7 +114,7 @@ class SSLResult(BaseModel):
     cipher_suites: list[str] = []
     vulnerabilities: list[str] = []
     grade: str | None = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 # ============================================================
@@ -157,7 +157,7 @@ class Finding(BaseModel):
     status: Literal["open", "remediated", "accepted_risk"] = "open"
     tool: str = ""
     raw_output: str | None = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 # ============================================================
@@ -197,7 +197,7 @@ class PentestReport(BaseModel):
     executive_summary: str | None = None
     conclusion: str | None = None
     risk_matrix: RiskMatrix | None = None
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 # ============================================================
@@ -245,7 +245,7 @@ class ToolsCheckResult(BaseModel):
     total: int = 0
     available: int = 0
     missing: int = 0
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 # ============================================================
@@ -301,7 +301,7 @@ class OSINTResult(BaseModel):
     technologies: list[str] = []
     hosts: list[str] = []
     raw_output: str = ""
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 class SecretFinding(BaseModel):
@@ -311,7 +311,7 @@ class SecretFinding(BaseModel):
     commit: str | None = None
     description: str = ""
     raw: str = ""
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
 
 
 class ContainerVulnerability(BaseModel):
@@ -345,4 +345,4 @@ class ADEnumResult(BaseModel):
     kerberos_tickets: list[str] = []
     tool: str = ""
     raw_output: str = ""
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))

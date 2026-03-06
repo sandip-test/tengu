@@ -794,7 +794,7 @@ def main() -> None:
 
     logger.info(
         "Starting Tengu MCP Server",
-        version="0.2.1",
+        version="0.3.1",
         log_level=cfg.server.log_level,
         allowed_hosts=cfg.targets.allowed_hosts,
         stealth_enabled=cfg.stealth.enabled,

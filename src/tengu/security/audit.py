@@ -19,7 +19,7 @@ logger = structlog.get_logger(__name__)
 
 
 class AuditLogger:
-    """Writes tamper-evident audit records for all Tengu tool calls."""
+    """Writes structured audit records for all Tengu tool calls."""
 
     def __init__(self, log_path: str | Path) -> None:
         self._path = Path(log_path).expanduser()

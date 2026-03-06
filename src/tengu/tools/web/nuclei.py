@@ -1,6 +1,7 @@
 """Nuclei vulnerability scanner tool wrapper."""
 
 import json
+import re
 import time
 from typing import Literal
 
@@ -87,22 +88,16 @@ async def nuclei_scan(
     ]
 
     if templates:
-        import re
-
         safe_templates = [t for t in templates if re.match(r"^[a-zA-Z0-9_\-/\.]+$", t)]
         for tmpl in safe_templates:
             args.extend(["-t", tmpl])
 
     if tags:
-        import re
-
         safe_tags = [t for t in tags if re.match(r"^[a-zA-Z0-9_\-]+$", t)]
         if safe_tags:
             args.extend(["-tags", ",".join(safe_tags)])
 
     if exclude_tags:
-        import re
-
         safe_exclude = [t for t in exclude_tags if re.match(r"^[a-zA-Z0-9_\-]+$", t)]
         if safe_exclude:
             args.extend(["-etags", ",".join(safe_exclude)])

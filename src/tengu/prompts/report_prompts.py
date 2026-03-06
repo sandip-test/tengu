@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 
 def executive_report(
     findings: list[dict],
@@ -188,7 +190,7 @@ def finding_detail(
 
 Generate a complete finding document with:
 
-1. **Finding ID**: TENGU-{__import__("datetime").datetime.now().year}-XXX (assign appropriate number)
+1. **Finding ID**: TENGU-{datetime.now().year}-XXX (assign appropriate number)
 2. **Title**: Concise, descriptive title (max 80 chars)
 3. **Severity**: Critical/High/Medium/Low/Informational
 4. **CVSS Score**: Calculate from vector if provided, or estimate based on impact
