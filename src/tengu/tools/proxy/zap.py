@@ -261,7 +261,11 @@ async def zap_get_alerts(
     """
     audit = get_audit_logger()
     alert_target = url or "zap-instance"
-    audit_params: dict[str, object] = {"url": url, "risk_level": risk_level, "max_alerts": max_alerts}
+    audit_params: dict[str, object] = {
+        "url": url,
+        "risk_level": risk_level,
+        "max_alerts": max_alerts,
+    }
     await audit.log_tool_call("zap_get_alerts", alert_target, audit_params, result="started")
     await ctx.report_progress(0, 2, "Fetching ZAP alerts...")
 
