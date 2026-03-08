@@ -634,8 +634,6 @@ tengu/
 │   ├── deployment-guide.md
 │   ├── api-reference.md
 │   ├── autonomous-agent.md
-│   ├── demo-script.md
-│   ├── hn-post.md
 │   └── contributing.md
 │
 ├── logs/                  ← Audit logs (gitignored)
